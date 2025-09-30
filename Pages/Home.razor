@@ -4,6 +4,7 @@
 @using FlipperSimLib
 @using FlipperSimLib.Models
 @using System.Drawing
+@using System.Diagnostics
 
 <PageTitle>Home</PageTitle>
 
@@ -137,6 +138,7 @@
     private long _startIndex = 0;
     private bool _isGameOver = false;
     private string _gameOverReason = string.Empty;
+    private readonly Stopwatch _stopWatch = new();
 
     protected override void OnInitialized()
     {
@@ -144,16 +146,19 @@
 
         if (_refreshTimer is null)
         {
-            _refreshTimer = new Timer(async s => await RefreshRealEstateMarketAsync(s), null, 0, 995);
+            _refreshTimer = new Timer(async s => await RefreshRealEstateMarketAsync(s), null, 0, Timeout.Infinite);
         }
     }
 
     protected async Task RefreshRealEstateMarketAsync(object? state)
     {
+        _stopWatch.Restart();
+
         if (_isGameOver)
         {
             MarketSim.ResetAccount();
             await dialog.ShowAsync("GAME OVER :-(", _gameOverReason ?? "It's over, sorry.", new ConfirmDialogOptions { YesButtonText = "OK", NoButtonText = "Thanks!" });
+            _isGameOver = false;
         }
 
         if (MarketSim.IsFreshGame)
@@ -199,6 +204,9 @@
 
         (_isGameOver, _gameOverReason) = MarketSim.CheckIfGameIsOver();
         StateHasChanged();
+        _stopWatch.Stop();
+        var dt = Math.Max(0, 995 - _stopWatch.ElapsedMilliseconds);
+        _refreshTimer?.Change(dt, Timeout.Infinite);
     }
 
     private Task DeleteOffer(RealEstateOffer offer)
