@@ -1,0 +1,30 @@
+﻿<Project Sdk="Microsoft.NET.Sdk.BlazorWebAssembly">
+
+  <PropertyGroup>
+    <TargetFramework>net9.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Remove="FlipperSimLib\**" />
+    <Content Remove="FlipperSimLib\**" />
+    <EmbeddedResource Remove="FlipperSimLib\**" />
+    <None Remove="FlipperSimLib\**" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Remove="OfferCard.razor" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Blazor.Bootstrap" Version="3.4.0" />
+    <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly" Version="9.0.8" />
+    <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.DevServer" Version="9.0.8" PrivateAssets="all" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="FlipperSimLib\FlipperSimLib.csproj" />
+  </ItemGroup>
+
+</Project>

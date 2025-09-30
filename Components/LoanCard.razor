@@ -1,0 +1,20 @@
+﻿@using FlipperSimLib.Models
+<Card Class="my-2">
+    <CardHeader Color="@(AvailableFunding > Loan.LoanAmount ? CardColor.Success : CardColor.Secondary)">
+        @($"{Loan.LoanAmount:N2} PLN")
+    </CardHeader>
+    <CardBody>
+        <Button Color="ButtonColor.Warning" @onclick="PayOff">PayOff</Button>
+    </CardBody>
+</Card>
+
+@code {
+    [Parameter] public required Loan Loan { get; init; }
+    [Parameter] public required decimal AvailableFunding { get; init; }
+    [Parameter] public EventCallback<string> OnClickCallback { get; init; }
+
+    private async Task PayOff()
+    {
+        await OnClickCallback.InvokeAsync(Loan.LoanId);
+    }
+}

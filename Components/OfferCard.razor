@@ -1,0 +1,42 @@
+﻿@using FlipperSimLib
+@using FlipperSimLib.Models
+<Card Class="my-2">
+    <CardHeader Color="@(AvailableFunding > Offer.TotalPrice() ? CardColor.Success : CardColor.Secondary)">
+        @($"[{Offer.UsableAreaSqMeters}m2] @ {Offer.TotalPrice():N2} PLN")
+    </CardHeader>
+    <CardBody>
+      <div class="row g-2 mb-3">
+        <div class="col-6">
+            <p class="card-text">@($"Price per m2: {Offer.OfferPricePerSqMeter:N2} PLN ")</p>
+        </div>
+        <div class="col-6">
+            @if (Offer.IsPremium)
+            {
+            <Badge Color="BadgeColor.Dark">Premium</Badge>
+            }
+        </div>
+     </div>
+    </CardBody>
+    <CardFooter>
+        <Button Color="ButtonColor.Success" @onclick="Buy">Buy that!!!</Button>
+        <Button Color="ButtonColor.Warning" @onclick="Delete">Nope, thx!</Button> 
+    </CardFooter>
+</Card>
+
+@code {
+    [Parameter] public required RealEstateOffer Offer { get; init; }
+    [Parameter] public required decimal AvailableFunding { get; init; }
+    [Parameter] public EventCallback<RealEstateOffer> OnDeleteClickCallback { get; init; }
+    [Parameter] public EventCallback<RealEstateOffer> OnBuyClickCallback { get; init; }
+
+
+    private async Task Delete()
+    {
+        await OnDeleteClickCallback.InvokeAsync(Offer);
+    }
+
+    private async Task Buy()
+    {
+        await OnBuyClickCallback.InvokeAsync(Offer);
+    }
+}

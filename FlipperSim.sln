@@ -1,0 +1,31 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.14.36408.4
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FlipperSim", "FlipperSim.csproj", "{052A8D51-4862-4535-A792-4A1BD505CDA5}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FlipperSimLib", "FlipperSimLib\FlipperSimLib.csproj", "{D1D20C35-6D65-48FB-99EB-13DDE72CD1E7}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{052A8D51-4862-4535-A792-4A1BD505CDA5}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{052A8D51-4862-4535-A792-4A1BD505CDA5}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{052A8D51-4862-4535-A792-4A1BD505CDA5}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{052A8D51-4862-4535-A792-4A1BD505CDA5}.Release|Any CPU.Build.0 = Release|Any CPU
+		{D1D20C35-6D65-48FB-99EB-13DDE72CD1E7}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D1D20C35-6D65-48FB-99EB-13DDE72CD1E7}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D1D20C35-6D65-48FB-99EB-13DDE72CD1E7}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D1D20C35-6D65-48FB-99EB-13DDE72CD1E7}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {BFBA8578-89CD-4446-A277-9111F49E5309}
+	EndGlobalSection
+EndGlobal

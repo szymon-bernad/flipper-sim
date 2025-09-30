@@ -1,0 +1,292 @@
+﻿@page "/"
+@using BlazorBootstrap
+@using FlipperSim.Components
+@using FlipperSimLib
+@using FlipperSimLib.Models
+@using System.Drawing
+
+<PageTitle>Home</PageTitle>
+
+<div class="container-fluid" style="display: flex; flex-direction: row;">
+
+    <div class="container-fluid" style="display: flex; flex-direction: column; align-items: center; vertical-align: top; height: 100vh;">
+        <!-- Account Overview Card -->
+        <div class="card mb-4" style="width: 100%; max-width: 500px;">
+            <div class="card-header bg-primary text-white">
+                <h4 class="mb-0 text-center">
+                    <i class="bi bi-wallet2"></i> Your Flipper Account
+                </h4>
+            </div>
+            <div class="card-body">
+                <div class="text-center mb-3">
+                    <h3 class="@(MarketSim.FlipperAccount.AccountBalance >= 0 ? "text-success" : "text-danger")">
+                        @($"{MarketSim.FlipperAccount.AccountBalance:N2} PLN")
+                    </h3>
+                    <small class="text-muted">Current Balance</small>
+                </div>
+                
+                <!-- Quick Actions -->
+                <div class="row g-2 mb-3">
+                    <div class="col-6">
+                        <Button Color="ButtonColor.Warning" Disabled="@(LoansTotal > 700_000)" class="w-100" @onclick="async () => await TakeLoan(50_000)">
+                            <i class="bi bi-cash-coin"></i> 50k Loan
+                        </Button>
+                    </div>
+                    <div class="col-6">
+                        <Button Color="ButtonColor.Danger" Disabled="@(LoansTotal > 650_000)" class="w-100" @onclick="async () => await TakeLoan(100_000)">
+                            <i class="bi bi-cash-stack"></i> 100k Loan
+                        </Button>
+                    </div>
+                </div>
+
+                <!-- Account Summary -->
+                <div class="row text-center">
+                    <div class="col-6">
+                        <div class="border-end">
+                            <h5 class="text-success mb-1">@MarketSim.FlipperAccount.Investments.Count() properties</h5>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="fw-bold text-danger">@($"Loans for {LoansTotal:N0} PLN")</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Investments Section -->
+        @if (MarketSim.FlipperAccount.Investments.Any())
+        {
+            <div class="mb-4" style="width: 100%; max-width: 500px;">
+                    <h5 class="mb-0">
+                        <i class="bi bi-house-fill"></i> @($"Your Investments ({MarketSim.FlipperAccount.Investments.Sum(i => i.GetCurrentPrice()):N0} PLN)")
+                    </h5>
+                    @foreach (var inv in MarketSim.FlipperAccount.Investments)
+                    {
+                        <div class="mb-2">
+                            <InvestmentCard Model="inv" MarketSim="MarketSim" 
+                            OnClickCallback="@(EventCallback.Factory.Create<string>(this, SellInvestment))"
+                            OnUpgradeClickCallback="@(EventCallback.Factory.Create<string>(this, UpgradeInvestment))" />
+                        </div>
+                    }
+            </div>
+        }
+
+        <!-- Loans Section -->
+        @if (MarketSim.FlipperAccount.Loans.Any())
+        {
+            <div class="card mb-4" style="width: 100%; max-width: 500px;">
+                <div class="card-header bg-danger text-white">
+                    <h5 class="mb-0">
+                        <i class="bi bi-credit-card"></i> Active Loans
+                    </h5>
+                </div>
+                <div class="card-body p-2">
+                    @foreach (var loan in MarketSim.FlipperAccount.Loans)
+                    {
+                        <div class="mb-2">
+                            <LoanCard Loan="loan" AvailableFunding="MarketSim.FlipperAccount.AccountBalance" OnClickCallback="@(EventCallback.Factory.Create<string>(this, PayOffLoan))" />
+                        </div>
+                    }
+                </div>
+            </div>
+        }
+    </div>
+    <div class="container-fluid">
+        <div class="container-fluid" style="display: flex; flex-direction: column; align-items: center; vertical-align: top; height: 100vh;">
+            <div class="container-fluid" style="display: flex; flex-direction: column; align-items: center; vertical-align: top; height: 55vh;">
+                <label>@(_startIndex == 0 ? _columnValues.Count() : _startIndex + 55)</label>
+                <LineChart @ref="Lchart" hidden="@(IsLoading ? "hidden" : null)" Width="600" WidthUnit=@Unit.Pt Height="300" HeightUnit=@Unit.Pt style="display: inline-block; margin: 0 auto" />
+                <Spinner Type="SpinnerType.Dots" Color="SpinnerColor.Success" Size="SpinnerSize.Large" Visible="@IsLoading" style="position: absolute; margin: 0 auto" />
+            </div>
+            <div class="offers-section">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h4 class="mb-0">Active Offers (@CurrentOffers.Count)</h4>
+                    <Badge Color="BadgeColor.Info">@($"{MarketSim.FlipperAccount.AccountBalance:N0} PLN available")</Badge>
+                </div>
+                <div class="row g-3">
+                    @foreach (var off in CurrentOffers)
+                    {
+                        <div class="col-12 col-md-6 col-lg-4">
+                            <OfferCard Offer="off" AvailableFunding="MarketSim.FlipperAccount.AccountBalance"
+                                        OnDeleteClickCallback="@(EventCallback.Factory.Create<RealEstateOffer>(this, DeleteOffer))"
+                                        OnBuyClickCallback="@(EventCallback.Factory.Create<RealEstateOffer>(this, BuyOffer))" />
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+
+<ConfirmDialog @ref="dialog" />
+
+@code {
+    private bool IsLoading = false;
+    private LineChart Lchart = default!;
+    private LineChartOptions _lineChartOptions = new LineChartOptions { Responsive = true, Interaction = new Interaction { Mode = InteractionMode.Nearest } };
+    private ChartData? _chartData = default;
+    private ConfirmDialog dialog = default!;
+    private bool _unchartedTerritory = true;
+    private List<double?> _columnValues = new();
+    private readonly RealEstateMarketSimulation MarketSim = new (new MarketPriceProvider(), null);
+    private ICollection<RealEstateOffer> CurrentOffers = [];
+    private decimal LoansTotal => MarketSim.FlipperAccount.Loans.Sum(l => l.LoanAmount);
+    private Timer? _refreshTimer = default;
+    private long _startIndex = 0;
+    private bool _isGameOver = false;
+    private string _gameOverReason = string.Empty;
+
+    protected override void OnInitialized()
+    {
+        base.OnInitialized();
+
+        if (_refreshTimer is null)
+        {
+            _refreshTimer = new Timer(async s => await RefreshRealEstateMarketAsync(s), null, 0, 995);
+        }
+    }
+
+    protected async Task RefreshRealEstateMarketAsync(object? state)
+    {
+        if (_isGameOver)
+        {
+            MarketSim.ResetAccount();
+            await dialog.ShowAsync("GAME OVER :-(", _gameOverReason ?? "It's over, sorry.", new ConfirmDialogOptions { YesButtonText = "OK", NoButtonText = "Thanks!" });
+        }
+
+        if (MarketSim.IsFreshGame)
+        {
+            await dialog.ShowAsync("Welcome to FlipperSim!", 
+                "Buy low, sell high, and try to make as much money as possible flipping real estate. \r\n" +
+                "You can take only 750k in loans and you'll lose if your account goes into debt or you're not getting rich fast enough. \r\n\r\n" + 
+                "Good luck!", 
+            new ConfirmDialogOptions { YesButtonText = "Let's go!", NoButtonText = "Flip that!" });
+        }
+
+        CurrentOffers = MarketSim.GetUpdatedRealEstateOffers(10).OrderBy(o => o.CreatedAt).ToList();
+
+        _columnValues.Add((double)MarketSim.GetMarketPricePerSqMeter(50.0m, false));
+        if (_columnValues.Count > 55)
+        {
+            _columnValues.RemoveAt(0);
+            ++_startIndex;
+        }
+
+        long q = _startIndex;
+        _chartData = new ChartData
+            {
+                Labels = _columnValues.Select(vv => $"{++q}").ToList(),
+                Datasets =
+                    [new LineChartDataset()
+                        {
+                            Label = "Real Estate Market",
+                            Data = _columnValues,
+                            BackgroundColor = "#51a88b",
+                }]
+            };
+
+        if (_unchartedTerritory)
+        {
+            await Lchart.InitializeAsync(_chartData!, _lineChartOptions);
+            _unchartedTerritory = false;
+        }
+        else
+        {
+            await Lchart.UpdateValuesAsync(_chartData!);
+        }
+
+        (_isGameOver, _gameOverReason) = MarketSim.CheckIfGameIsOver();
+        StateHasChanged();
+    }
+
+    private Task DeleteOffer(RealEstateOffer offer)
+    {
+        this.MarketSim.DeleteOffer(offer.PropertyRefId);
+        this.CurrentOffers.Remove(offer);
+
+        StateHasChanged();
+        return Task.CompletedTask;
+    }
+
+    private Task BuyOffer(RealEstateOffer offer)
+    {
+        try
+        {
+            this.MarketSim.BuyOffer(offer.PropertyRefId);
+            this.CurrentOffers.Remove(offer);
+            StateHasChanged();
+
+        }
+        catch(Exception ex)
+        {
+            Console.WriteLine($"Error buying offer {offer.PropertyRefId}: {ex.Message}");
+        }
+
+        return Task.CompletedTask;
+    }
+
+    private Task SellInvestment(string refId)
+    {
+        try
+        {
+            this.MarketSim.SellInvestment(refId);
+            StateHasChanged();
+        }
+        catch(Exception ex)
+        {
+            Console.WriteLine($"Error selling investment {refId}: {ex.Message}");
+        }
+
+        return Task.CompletedTask;
+    }
+
+    private Task TakeLoan(decimal amount)
+    {
+        try
+        {
+            this.MarketSim.FlipperAccount.AddLoan(
+                new Loan
+                {
+                    InterestRate = this.MarketSim.GetInterestRate(),
+                    LoanAmount = amount,
+                    PaymentFrequency = 5,
+                    LoanId = Guid.NewGuid().ToString()
+                });
+
+            StateHasChanged();
+        }
+        catch(Exception ex)
+        {
+            Console.WriteLine($"Error taking loan of {amount}: {ex.Message}");
+        }
+        return Task.CompletedTask;
+
+    }
+
+    private Task PayOffLoan(string loanId)
+    {
+        try
+        {
+            this.MarketSim.FlipperAccount.PayOffLoan(loanId);
+            StateHasChanged();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error paying off loan: {loanId}: {ex.Message}");
+        }
+
+        return Task.CompletedTask;
+    }
+
+    private Task UpgradeInvestment(string refId)
+    {
+        if(this.MarketSim.UpgradeInvestment(refId))
+        {
+            StateHasChanged();
+        }
+
+        return Task.CompletedTask;
+    }
+}

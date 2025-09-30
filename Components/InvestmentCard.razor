@@ -1,0 +1,53 @@
+﻿@using FlipperSimLib
+@using FlipperSimLib.Models
+<Card Class="my-2">
+    <CardHeader Color="@(CurrentDiff > 0 ? CardColor.Success : CardColor.Danger)">
+        @($"Investment @ {CurrentDiff:N2} PLN")
+    </CardHeader>
+    <CardBody>
+
+        <p class="card-text">@($"Purchase Price: {Model.PurchasePrice:N2} PLN")</p>
+        <p class="card-text">@($"Current Price: {CurrentPrice:N2} PLN")</p>
+        <p class="card-text">@($"Current Price /m2: {CurrentPrice/Model.UsableAreaSqMeters:N2} PLN")</p>
+
+        @if (Model.IsPremium)
+        {
+            <div class="container-fluid" style="display: flex; flex-direction: row;">
+                <Badge Color="BadgeColor.Dark">Premium</Badge>
+                @if(Model.IsBeingUpgraded)
+                {
+                    <Badge Color="BadgeColor.Warning">Upgrading...</Badge>
+                }
+            </div>
+        }
+        <p class="card-text">ID: @Model.PropertyRefId</p>
+    </CardBody>
+    <CardFooter>
+        <Button Color="ButtonColor.Warning" Disabled="Model.IsBeingUpgraded" @onclick="Submit">Sell</Button>
+        @if (!Model.IsPremium)
+        {
+            <Button Color="ButtonColor.Primary" @onclick="Upgrade">Upgrade</Button>
+        }
+    </CardFooter>
+</Card>
+
+@code {
+    [Parameter] public required RealEstateInvestment Model { get; init; }
+    [Parameter] public required RealEstateMarketSimulation MarketSim { get; init; }
+    [Parameter] public EventCallback<string> OnClickCallback { get; set; }
+    [Parameter] public EventCallback<string> OnUpgradeClickCallback { get; set; }
+
+    private decimal CurrentDiff => Math.Round(CurrentPrice - Model.PurchasePrice, 2, MidpointRounding.AwayFromZero);
+
+    private decimal CurrentPrice => Model.GetCurrentPrice();
+
+    private async Task Submit()
+    {
+        await OnClickCallback.InvokeAsync(Model.PropertyRefId);
+    }
+
+    private async Task Upgrade()
+    {
+        await OnUpgradeClickCallback.InvokeAsync(Model.PropertyRefId);
+    }
+}
