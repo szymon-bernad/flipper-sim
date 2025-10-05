@@ -32,7 +32,7 @@
     [Parameter] public EventCallback<RealEstateOffer> OnDeleteClickCallback { get; init; }
     [Parameter] public EventCallback<RealEstateOffer> OnBuyClickCallback { get; init; }
 
-    private string BgClass => AvailableFunding > Offer.TotalPrice() ? "rz-p-0 rz-background-color-success-light" : "rz-p-0 rz-background-color-secondary-light";
+    private string BgClass => AvailableFunding > Offer.TotalPrice() ? "rz-p-0 rz-background-color-success-light" : "rz-p-0 rz-background-color-secondary";
 
     private string OfferHeader => $"[{Offer.UsableAreaSqMeters}m2] @ {Math.Round(Offer.TotalPrice() / 1000, 0, MidpointRounding.AwayFromZero):N0}k PLN";
     private async Task Delete()

@@ -95,6 +95,5 @@ code {
     height: 20rem;
     border: var(--rz-panel-border);
     background-color: var(--rz-panel-background-color);
-    box-shadow: var(--rz-panel-shadow);
     border-radius: var(--rz-border-radius)
 }

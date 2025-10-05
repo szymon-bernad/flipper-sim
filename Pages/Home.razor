@@ -49,7 +49,7 @@
 
                         @if (MarketSim.FlipperAccount.Loans.Any())
                         {
-                            <RadzenButton @ref=_loansButton ButtonStyle="ButtonStyle.Info" Click="@(args => _loansPopup.ToggleAsync(_loansButton.Element))" Text="Show Loans"/>
+                            <RadzenButton @ref=_loansButton Style="min-width: 12rem" ButtonStyle="ButtonStyle.Primary" Click="@(args => _loansPopup.ToggleAsync(_loansButton.Element))" Text="Show Loans"/>
                         }
                     </RadzenStack>
                 </RadzenColumn>
@@ -87,7 +87,7 @@
             <RadzenRow>
                 @foreach (var off in CurrentOffers)
                 {
-                    <RadzenColumn Size="12" SizeXL="6">
+                    <RadzenColumn SizeMD="12" SizeLG="6" SizeXL="6">
                         <OfferCard Offer="off" AvailableFunding="MarketSim.FlipperAccount.AccountBalance"
                                    OnDeleteClickCallback="@(EventCallback.Factory.Create<RealEstateOffer>(this, DeleteOffer))"
                                    OnBuyClickCallback="@(EventCallback.Factory.Create<RealEstateOffer>(this, BuyOffer))" />
@@ -98,7 +98,7 @@
     </RadzenColumn>
 </RadzenRow>
 
-<Popup @ref=_loansPopup Lazy=true class="my-popup">
+<Popup @ref=_loansPopup Lazy=true class="my-popup rz-shadow-5">
     <RadzenText TextStyle="TextStyle.Body1" class="rz-p-4 rz-w-100 rz-text-align-center">
         <i class="bi bi-cash-stack"></i> Your Loans
     </RadzenText>
