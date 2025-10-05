@@ -1,35 +1,34 @@
 ﻿@using FlipperSimLib
 @using FlipperSimLib.Models
-<Card Class="my-2">
-    <CardHeader Color="@(CurrentDiff > 0 ? CardColor.Success : CardColor.Danger)">
-        @($"Investment @ {CurrentDiff:N2} PLN")
-    </CardHeader>
-    <CardBody>
-
-        <p class="card-text">@($"Purchase Price: {Model.PurchasePrice:N2} PLN")</p>
-        <p class="card-text">@($"Current Price: {CurrentPrice:N2} PLN")</p>
-        <p class="card-text">@($"Current Price /m2: {CurrentPrice/Model.UsableAreaSqMeters:N2} PLN")</p>
-
+<RadzenCard Variant="Variant.Filled" Wrap="FlexWrap.Wrap" Class="rz-p-0 rz-w-100" Gap="0">
+    <RadzenText TextStyle="TextStyle.H5" class="@(CurrentDiff > 0 ? "rz-w-100 rz-p-2 rz-background-color-success": "rz-w-100 rz-p-2 rz-background-color-danger")">
+        @($"{CurrentDiff:N2} PLN")
+    </RadzenText>
+    <RadzenStack class="rz-w-100 rz-p-2" Gap="0.2rem" AlignItems="AlignItems.Start">
         @if (Model.IsPremium)
         {
-            <div class="container-fluid" style="display: flex; flex-direction: row;">
-                <Badge Color="BadgeColor.Dark">Premium</Badge>
-                @if(Model.IsBeingUpgraded)
+            <RadzenStack class="rz-w-100 rz-p-0" Gap="0.2rem" Orientation="Radzen.Orientation.Horizontal" AlignItems="AlignItems.Stretch">
+                <RadzenBadge BadgeStyle="BadgeStyle.Primary">Premium</RadzenBadge>
+                @if (Model.IsBeingUpgraded)
                 {
-                    <Badge Color="BadgeColor.Warning">Upgrading...</Badge>
+                    <RadzenBadge BadgeStyle="BadgeStyle.Warning">Upgrading...</RadzenBadge>
                 }
-            </div>
+            </RadzenStack>
         }
-        <p class="card-text">ID: @Model.PropertyRefId</p>
-    </CardBody>
-    <CardFooter>
-        <Button Color="ButtonColor.Warning" Disabled="Model.IsBeingUpgraded" @onclick="Submit">Sell</Button>
-        @if (!Model.IsPremium)
-        {
-            <Button Color="ButtonColor.Primary" @onclick="Upgrade">Upgrade</Button>
-        }
-    </CardFooter>
-</Card>
+        <RadzenLabel>Purchase Price:</RadzenLabel>
+        <RadzenText TextStyle="TextStyle.Body1">@($"{Model.PurchasePrice:N2} PLN")</RadzenText>
+        <RadzenLabel>Current Price:</RadzenLabel>
+        <RadzenText TextStyle="TextStyle.Body1">@($"{CurrentPrice:N2} PLN")</RadzenText>
+        <RadzenLabel>Current Price /m2:</RadzenLabel>
+        <RadzenText TextStyle="TextStyle.Body1">@($"{CurrentPrice/Model.UsableAreaSqMeters:N2} PLN")</RadzenText>
+
+        <RadzenText TextStyle="TextStyle.Subtitle2">ID: @Model.PropertyRefId</RadzenText>
+    </RadzenStack>
+    <RadzenStack Orientation="Radzen.Orientation.Horizontal" class="rz-p-2">
+        <RadzenButton ButtonStyle="ButtonStyle.Warning" Disabled="Model.IsBeingUpgraded" Click="Submit">Sell</RadzenButton>
+        <RadzenButton ButtonStyle="ButtonStyle.Primary" Disabled="Model.IsPremium" Click="Upgrade">Upgrade</RadzenButton>
+    </RadzenStack>
+</RadzenCard>
 
 @code {
     [Parameter] public required RealEstateInvestment Model { get; init; }

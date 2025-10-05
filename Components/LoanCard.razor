@@ -1,12 +1,12 @@
 ﻿@using FlipperSimLib.Models
-<Card Class="my-2">
-    <CardHeader Color="@(AvailableFunding > Loan.LoanAmount ? CardColor.Success : CardColor.Secondary)">
-        @($"{Loan.LoanAmount:N2} PLN")
-    </CardHeader>
-    <CardBody>
-        <Button Color="ButtonColor.Warning" @onclick="PayOff">PayOff</Button>
-    </CardBody>
-</Card>
+<RadzenCard Variant="Variant.Text" class="rz-w-100">
+    <RadzenStack Orientation="Radzen.Orientation.Horizontal" Gap="0.5rem" Class="rz-w-100" JustifyContent="JustifyContent.Center" AlignItems="AlignItems.Center">
+        <RadzenText TextStyle="TextStyle.Body1">
+            @($"{Loan.LoanAmount/1000:N0}k PLN @ {Loan.InterestRate*100:N2} % rate")
+        </RadzenText>
+        <RadzenButton ButtonStyle="ButtonStyle.Success" Disabled="@(AvailableFunding < Loan.LoanAmount)" Click="PayOff">Pay off</RadzenButton>
+    </RadzenStack>
+</RadzenCard>
 
 @code {
     [Parameter] public required Loan Loan { get; init; }

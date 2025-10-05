@@ -1,136 +1,131 @@
 ﻿@page "/"
-@using BlazorBootstrap
 @using FlipperSim.Components
 @using FlipperSimLib
 @using FlipperSimLib.Models
 @using System.Drawing
 @using System.Diagnostics
+@using Radzen.Blazor
+@using Radzen.Blazor.Rendering
+@inject DialogService DialogService
 
-<PageTitle>Home</PageTitle>
+<PageTitle>FlipperSim</PageTitle>
+<RadzenRow>
+    <RadzenColumn SizeSM=12 SizeMD="8">
+        <RadzenStack AlignItems="AlignItems.Center" Orientation="Radzen.Orientation.Vertical">
+            <RadzenChart class="rz-w-100">
+                <RadzenChartTooltipOptions Shared="@false" />
+                <RadzenLineSeries Data="@_chartValues" CategoryProperty="Index" Title=" " ValueProperty="Value" LineType="LineType.Solid" Stroke="rgb(100,125,100)">
+                    <RadzenMarkers Visible="@false" />
+                    <RadzenSeriesDataLabels Visible="@false" />
+                </RadzenLineSeries>
+                <RadzenCategoryAxis/>
+                <RadzenValueAxis Formatter="@FormatAsCurrency">
+                    <RadzenGridLines Visible="true" />
+                    <RadzenAxisTitle Text="PLN" />
+                </RadzenValueAxis>
+            </RadzenChart>
+            <RadzenRow Gap="0.5rem" class="rz-w-100">
+                <RadzenColumn SizeMD="6" SizeLG="6" SizeSM="12">
+                    <RadzenStack AlignItems="AlignItems.Center" class="rz-w-100 rz-p-4 rz-border rz-border-radius-4 rz-border-color-primary-dark">
+                        <RadzenText TextStyle="TextStyle.H5">
+                            <i class="bi bi-wallet2"></i> Your Flipper Account
+                        </RadzenText>
+                        <RadzenText TextStyle="TextStyle.Caption">Current Balance</RadzenText>
+                        <RadzenText TextStyle="TextStyle.H4" class="@(MarketSim.FlipperAccount.AccountBalance >= 0 ? "rz-color-success" : "rz-color-danger")">
+                            @($"{MarketSim.FlipperAccount.AccountBalance:N2} PLN")
+                        </RadzenText>
 
-<div class="container-fluid" style="display: flex; flex-direction: row;">
-
-    <div class="container-fluid" style="display: flex; flex-direction: column; align-items: center; vertical-align: top; height: 100vh;">
-        <!-- Account Overview Card -->
-        <div class="card mb-4" style="width: 100%; max-width: 500px;">
-            <div class="card-header bg-primary text-white">
-                <h4 class="mb-0 text-center">
-                    <i class="bi bi-wallet2"></i> Your Flipper Account
-                </h4>
-            </div>
-            <div class="card-body">
-                <div class="text-center mb-3">
-                    <h3 class="@(MarketSim.FlipperAccount.AccountBalance >= 0 ? "text-success" : "text-danger")">
-                        @($"{MarketSim.FlipperAccount.AccountBalance:N2} PLN")
-                    </h3>
-                    <small class="text-muted">Current Balance</small>
-                </div>
-                
-                <!-- Quick Actions -->
-                <div class="row g-2 mb-3">
-                    <div class="col-6">
-                        <Button Color="ButtonColor.Warning" Disabled="@(LoansTotal > 700_000)" class="w-100" @onclick="async () => await TakeLoan(50_000)">
+                        <!-- Quick Actions -->
+                        <RadzenButton ButtonStyle="ButtonStyle.Warning" Style="min-width: 12rem" Disabled="@(LoansTotal > 700_000)" ButtonSize="ButtonSize.Small" Click="async () => await TakeLoan(50_000)">
                             <i class="bi bi-cash-coin"></i> 50k Loan
-                        </Button>
-                    </div>
-                    <div class="col-6">
-                        <Button Color="ButtonColor.Danger" Disabled="@(LoansTotal > 650_000)" class="w-100" @onclick="async () => await TakeLoan(100_000)">
+                        </RadzenButton>
+
+                        <RadzenButton ButtonStyle="ButtonStyle.Danger" Style="min-width: 12rem" Disabled="@(LoansTotal > 650_000)" Click="async () => await TakeLoan(100_000)">
                             <i class="bi bi-cash-stack"></i> 100k Loan
-                        </Button>
-                    </div>
-                </div>
+                        </RadzenButton>
 
-                <!-- Account Summary -->
-                <div class="row text-center">
-                    <div class="col-6">
-                        <div class="border-end">
-                            <h5 class="text-success mb-1">@MarketSim.FlipperAccount.Investments.Count() properties</h5>
-                        </div>
-                    </div>
-                    <div class="col-6">
+                        <!-- Account Summary -->
                         <div class="fw-bold text-danger">@($"Loans for {LoansTotal:N0} PLN")</div>
-                    </div>
-                </div>
-            </div>
-        </div>
 
-        <!-- Investments Section -->
-        @if (MarketSim.FlipperAccount.Investments.Any())
-        {
-            <div class="mb-4" style="width: 100%; max-width: 500px;">
-                    <h5 class="mb-0">
-                        <i class="bi bi-house-fill"></i> @($"Your Investments ({MarketSim.FlipperAccount.Investments.Sum(i => i.GetCurrentPrice()):N0} PLN)")
-                    </h5>
-                    @foreach (var inv in MarketSim.FlipperAccount.Investments)
-                    {
-                        <div class="mb-2">
-                            <InvestmentCard Model="inv" MarketSim="MarketSim" 
-                            OnClickCallback="@(EventCallback.Factory.Create<string>(this, SellInvestment))"
-                            OnUpgradeClickCallback="@(EventCallback.Factory.Create<string>(this, UpgradeInvestment))" />
-                        </div>
-                    }
-            </div>
-        }
+                        @if (MarketSim.FlipperAccount.Loans.Any())
+                        {
+                            <RadzenButton @ref=_loansButton ButtonStyle="ButtonStyle.Info" Click="@(args => _loansPopup.ToggleAsync(_loansButton.Element))" Text="Show Loans"/>
+                        }
+                    </RadzenStack>
+                </RadzenColumn>
+                <RadzenColumn SizeMD="6" SizeLG="6" SizeSM="12">
+                    <RadzenStack AlignItems="AlignItems.Center" class="rz-w-100">
+                        @if (MarketSim.FlipperAccount.Investments.Any())
+                        {
+                            <RadzenText TextStyle="TextStyle.H5">
+                                <i class="bi bi-house-fill"></i> @($"Your Investments ({MarketSim.FlipperAccount.Investments.Sum(i => i.GetCurrentPrice()):N0} PLN)")
+                            </RadzenText>
+                            @foreach (var inv in MarketSim.FlipperAccount.Investments)
+                            {
+                                <InvestmentCard Model="inv" MarketSim="MarketSim"
+                                                OnClickCallback="@(EventCallback.Factory.Create<string>(this, SellInvestment))"
+                                                OnUpgradeClickCallback="@(EventCallback.Factory.Create<string>(this, UpgradeInvestment))" />
+                            }
+                        }
+                        else
+                        {
+                            <RadzenText TextStyle="TextStyle.H5">
+                                <i class="bi bi-house" style="font-size: 3rem;"></i> No Investments Yet
+                            </RadzenText>
+                            <RadzenText TextStyle="TextStyle.Body1" class="text-center">
+                                Start buying properties to see them here!
+                            </RadzenText>
+                        }
+                    </RadzenStack>
+                </RadzenColumn>
+            </RadzenRow>
+        </RadzenStack>
+    </RadzenColumn>
+    <RadzenColumn SizeSM="12" SizeMD="4" class="text-end rz-p-3">
+        <RadzenStack AlignItems="AlignItems.Center">
+            <RadzenText TextStyle="TextStyle.H5">Active Offers (@CurrentOffers.Count)</RadzenText>
+            <RadzenRow>
+                @foreach (var off in CurrentOffers)
+                {
+                    <RadzenColumn Size="12" SizeXL="6">
+                        <OfferCard Offer="off" AvailableFunding="MarketSim.FlipperAccount.AccountBalance"
+                                   OnDeleteClickCallback="@(EventCallback.Factory.Create<RealEstateOffer>(this, DeleteOffer))"
+                                   OnBuyClickCallback="@(EventCallback.Factory.Create<RealEstateOffer>(this, BuyOffer))" />
+                    </RadzenColumn>
+                }
+            </RadzenRow>
+        </RadzenStack>
+    </RadzenColumn>
+</RadzenRow>
 
-        <!-- Loans Section -->
-        @if (MarketSim.FlipperAccount.Loans.Any())
-        {
-            <div class="card mb-4" style="width: 100%; max-width: 500px;">
-                <div class="card-header bg-danger text-white">
-                    <h5 class="mb-0">
-                        <i class="bi bi-credit-card"></i> Active Loans
-                    </h5>
-                </div>
-                <div class="card-body p-2">
-                    @foreach (var loan in MarketSim.FlipperAccount.Loans)
-                    {
-                        <div class="mb-2">
-                            <LoanCard Loan="loan" AvailableFunding="MarketSim.FlipperAccount.AccountBalance" OnClickCallback="@(EventCallback.Factory.Create<string>(this, PayOffLoan))" />
-                        </div>
-                    }
-                </div>
-            </div>
-        }
-    </div>
-    <div class="container-fluid">
-        <div class="container-fluid" style="display: flex; flex-direction: column; align-items: center; vertical-align: top; height: 100vh;">
-            <div class="container-fluid" style="display: flex; flex-direction: column; align-items: center; vertical-align: top; height: 55vh;">
-                <label>@(_startIndex == 0 ? _columnValues.Count() : _startIndex + 55)</label>
-                <LineChart @ref="Lchart" hidden="@(IsLoading ? "hidden" : null)" Width="600" WidthUnit=@Unit.Pt Height="300" HeightUnit=@Unit.Pt style="display: inline-block; margin: 0 auto" />
-                <Spinner Type="SpinnerType.Dots" Color="SpinnerColor.Success" Size="SpinnerSize.Large" Visible="@IsLoading" style="position: absolute; margin: 0 auto" />
-            </div>
-            <div class="offers-section">
-                <div class="d-flex justify-content-between align-items-center mb-3">
-                    <h4 class="mb-0">Active Offers (@CurrentOffers.Count)</h4>
-                    <Badge Color="BadgeColor.Info">@($"{MarketSim.FlipperAccount.AccountBalance:N0} PLN available")</Badge>
-                </div>
-                <div class="row g-3">
-                    @foreach (var off in CurrentOffers)
-                    {
-                        <div class="col-12 col-md-6 col-lg-4">
-                            <OfferCard Offer="off" AvailableFunding="MarketSim.FlipperAccount.AccountBalance"
-                                        OnDeleteClickCallback="@(EventCallback.Factory.Create<RealEstateOffer>(this, DeleteOffer))"
-                                        OnBuyClickCallback="@(EventCallback.Factory.Create<RealEstateOffer>(this, BuyOffer))" />
-                        </div>
-                    }
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
-
-
-
-<ConfirmDialog @ref="dialog" />
+<Popup @ref=_loansPopup Lazy=true class="my-popup">
+    <RadzenText TextStyle="TextStyle.Body1" class="rz-p-4 rz-w-100 rz-text-align-center">
+        <i class="bi bi-cash-stack"></i> Your Loans
+    </RadzenText>
+    @if (@MarketSim.FlipperAccount.Loans.Count() == 0)
+    {
+        <RadzenText TextStyle="TextStyle.Body1" class="rz-p-4 rz-w-100 rz-text-align-center">
+            No active loans - good job!
+        </RadzenText>
+    }
+    else
+    {
+        <RadzenDataList @ref=_dataList AllowVirtualization=true Data="@MarketSim.FlipperAccount.Loans" Style="flex: 1; --rz-datalist-padding: 0.1rem 0; --rz-datalist-item-margin-inline: 0; overflow:auto;">
+            <Template Context="_loan">
+                <LoanCard Loan="_loan" AvailableFunding="@MarketSim.FlipperAccount.AccountBalance" OnClickCallback="@(EventCallback.Factory.Create<string>(this, PayOffLoan))" />
+            </Template>
+        </RadzenDataList>
+    }
+</Popup>
 
 @code {
+
+    public record ChartDataItem(int Index, double? Value);
+
     private bool IsLoading = false;
-    private LineChart Lchart = default!;
-    private LineChartOptions _lineChartOptions = new LineChartOptions { Responsive = true, Interaction = new Interaction { Mode = InteractionMode.Nearest } };
-    private ChartData? _chartData = default;
-    private ConfirmDialog dialog = default!;
+    private RadzenDialog dialog = default!;
     private bool _unchartedTerritory = true;
-    private List<double?> _columnValues = new();
+    private ICollection<ChartDataItem> _chartValues = new List<ChartDataItem>();
     private readonly RealEstateMarketSimulation MarketSim = new (new MarketPriceProvider(), null);
     private ICollection<RealEstateOffer> CurrentOffers = [];
     private decimal LoansTotal => MarketSim.FlipperAccount.Loans.Sum(l => l.LoanAmount);
@@ -139,6 +134,15 @@
     private bool _isGameOver = false;
     private string _gameOverReason = string.Empty;
     private readonly Stopwatch _stopWatch = new();
+    private Popup _loansPopup = default!;
+    private RadzenButton _loansButton = default!;
+    private RadzenDataList<Loan> _dataList = default!;
+    private Loan? _loan = default;
+
+    string? FormatAsCurrency(object value)
+    {
+        return ((double?)value)?.ToString("N2");
+    }
 
     protected override void OnInitialized()
     {
@@ -157,49 +161,31 @@
         if (_isGameOver)
         {
             MarketSim.ResetAccount();
-            await dialog.ShowAsync("GAME OVER :-(", _gameOverReason ?? "It's over, sorry.", new ConfirmDialogOptions { YesButtonText = "OK", NoButtonText = "Thanks!" });
+            await DialogService.Alert(_gameOverReason ?? "It's over, sorry.", "GAME OVER :-(", new AlertOptions { OkButtonText = "OK, thanks!" });
             _isGameOver = false;
         }
 
         if (MarketSim.IsFreshGame)
         {
-            await dialog.ShowAsync("Welcome to FlipperSim!", 
-                "Buy low, sell high, and try to make as much money as possible flipping real estate. \r\n" +
-                "You can take only 750k in loans and you'll lose if your account goes into debt or you're not getting rich fast enough. \r\n\r\n" + 
-                "Good luck!", 
-            new ConfirmDialogOptions { YesButtonText = "Let's go!", NoButtonText = "Flip that!" });
+            await DialogService.OpenAsync<WelcomeDialog>( 
+                $"Welcome, Flipper!",
+               new Dictionary<string, object>(),
+               new DialogOptions()
+               {
+                   Resizable = false,
+                   Draggable = false,
+                   CloseDialogOnEsc = false,
+                   CloseDialogOnOverlayClick = false,
+               });
         }
 
         CurrentOffers = MarketSim.GetUpdatedRealEstateOffers(10).OrderBy(o => o.CreatedAt).ToList();
 
-        _columnValues.Add((double)MarketSim.GetMarketPricePerSqMeter(50.0m, false));
-        if (_columnValues.Count > 55)
+        _chartValues.Add(new(_chartValues.LastOrDefault()?.Index+1 ?? 1, (double)MarketSim.GetMarketPricePerSqMeter(50.0m, false)));
+        if (_chartValues.Count > 100)
         {
-            _columnValues.RemoveAt(0);
+            _chartValues = _chartValues.Skip(1).ToList();
             ++_startIndex;
-        }
-
-        long q = _startIndex;
-        _chartData = new ChartData
-            {
-                Labels = _columnValues.Select(vv => $"{++q}").ToList(),
-                Datasets =
-                    [new LineChartDataset()
-                        {
-                            Label = "Real Estate Market",
-                            Data = _columnValues,
-                            BackgroundColor = "#51a88b",
-                }]
-            };
-
-        if (_unchartedTerritory)
-        {
-            await Lchart.InitializeAsync(_chartData!, _lineChartOptions);
-            _unchartedTerritory = false;
-        }
-        else
-        {
-            await Lchart.UpdateValuesAsync(_chartData!);
         }
 
         (_isGameOver, _gameOverReason) = MarketSim.CheckIfGameIsOver();
@@ -208,6 +194,7 @@
         var dt = Math.Max(0, 995 - _stopWatch.ElapsedMilliseconds);
         _refreshTimer?.Change(dt, Timeout.Infinite);
     }
+
 
     private Task DeleteOffer(RealEstateOffer offer)
     {

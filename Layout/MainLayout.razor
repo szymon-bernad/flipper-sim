@@ -1,3 +1,13 @@
-﻿@inherits LayoutComponentBase
+﻿@using Radzen.Blazor
+@inherits LayoutComponentBase
+<RadzenLayout style="position: relative">
+    <RadzenHeader>
+            <NavMenu />
+    </RadzenHeader>
 
-@Body
+    <RadzenBody>
+    @Body
+    </RadzenBody>
+</RadzenLayout>
+
+    <RadzenComponents @rendermode="RenderMode.InteractiveAuto" />

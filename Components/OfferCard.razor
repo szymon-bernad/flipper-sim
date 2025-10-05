@@ -1,27 +1,30 @@
 ﻿@using FlipperSimLib
 @using FlipperSimLib.Models
-<Card Class="my-2">
-    <CardHeader Color="@(AvailableFunding > Offer.TotalPrice() ? CardColor.Success : CardColor.Secondary)">
-        @($"[{Offer.UsableAreaSqMeters}m2] @ {Offer.TotalPrice():N2} PLN")
-    </CardHeader>
-    <CardBody>
-      <div class="row g-2 mb-3">
-        <div class="col-6">
-            <p class="card-text">@($"Price per m2: {Offer.OfferPricePerSqMeter:N2} PLN ")</p>
-        </div>
-        <div class="col-6">
-            @if (Offer.IsPremium)
-            {
-            <Badge Color="BadgeColor.Dark">Premium</Badge>
-            }
-        </div>
-     </div>
-    </CardBody>
-    <CardFooter>
-        <Button Color="ButtonColor.Success" @onclick="Buy">Buy that!!!</Button>
-        <Button Color="ButtonColor.Warning" @onclick="Delete">Nope, thx!</Button> 
-    </CardFooter>
-</Card>
+
+<RadzenCard Variant="Variant.Flat" Style="min-width: 10rem; padding: 0pt;" Gap="0.5rem">
+    <RadzenStack Class="@($"{BgClass} rz-w-100 rz-p-2")" Gap="0" AlignItems="AlignItems.Center">
+            <RadzenText TextStyle="TextStyle.H6" >
+            @(OfferHeader)
+            </RadzenText>
+        <RadzenStack Style="min-height: 5rem" AlignItems="AlignItems.Center">
+                @if (Offer.IsPremium)
+                {
+                    <RadzenBadge class="rz-w-70">Premium</RadzenBadge>
+                }
+                else
+                {
+                    <span />
+                }
+            <RadzenText TextStyle="TextStyle.Caption">Price /m2:</RadzenText>
+            <RadzenText TextStyle="TextStyle.Body1">@($"{Offer.OfferPricePerSqMeter:N2} PLN")</RadzenText>
+
+            </RadzenStack>
+        <RadzenStack Orientation="Radzen.Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="0.5rem">
+            <RadzenButton Size="Radzen.ButtonSize.Small" ButtonStyle="ButtonStyle.Success" Disabled="@(AvailableFunding < Offer.TotalPrice())" Click="Buy">Buy that!</RadzenButton>
+            <RadzenButton Size="Radzen.ButtonSize.Small" ButtonStyle="ButtonStyle.Warning" Click="Delete">Nope, thx!</RadzenButton>
+        </RadzenStack>
+    </RadzenStack>
+</RadzenCard>
 
 @code {
     [Parameter] public required RealEstateOffer Offer { get; init; }
@@ -29,7 +32,9 @@
     [Parameter] public EventCallback<RealEstateOffer> OnDeleteClickCallback { get; init; }
     [Parameter] public EventCallback<RealEstateOffer> OnBuyClickCallback { get; init; }
 
+    private string BgClass => AvailableFunding > Offer.TotalPrice() ? "rz-p-0 rz-background-color-success-light" : "rz-p-0 rz-background-color-secondary-light";
 
+    private string OfferHeader => $"[{Offer.UsableAreaSqMeters}m2] @ {Math.Round(Offer.TotalPrice() / 1000, 0, MidpointRounding.AwayFromZero):N0}k PLN";
     private async Task Delete()
     {
         await OnDeleteClickCallback.InvokeAsync(Offer);

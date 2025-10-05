@@ -87,26 +87,14 @@ code {
     text-align: start;
 }
 
-.offers-section
-{
-    background: rgba(255, 255, 255, 0.05);
-    border-radius: 8px;
-    padding: 1.5rem;
-    margin-top: 1rem;
-    max-height: 60vh;
-    overflow-y: auto;
-}
-
-.offers-section::-webkit-scrollbar {
-    width: 6px;
-}
-
-.offers-section::-webkit-scrollbar-track {
-    background: rgba(255, 255, 255, 0.1);
-    border-radius: 3px;
-}
-
-.offers-section::-webkit-scrollbar-thumb {
-    background: rgba(255, 255, 255, 0.3);
-    border-radius: 3px;
+.my-popup {
+    display: none;
+    position: absolute;
+    overflow: auto;
+    width: 25rem;
+    height: 20rem;
+    border: var(--rz-panel-border);
+    background-color: var(--rz-panel-background-color);
+    box-shadow: var(--rz-panel-shadow);
+    border-radius: var(--rz-border-radius)
 }
