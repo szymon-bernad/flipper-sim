@@ -1,7 +1,9 @@
 ﻿@using FlipperSimLib
 @using FlipperSimLib.Models
+@using Microsoft.Extensions.Localization
+@inject IStringLocalizer<FlipperSim.Resources.Localization> Localizer
 
-<RadzenCard Variant="Variant.Flat" Style="min-width: 10rem; padding: 0pt;" Gap="0.5rem">
+<RadzenCard Variant="Variant.Outlined" Class="rz-p-0 rz-w-100" Style="min-width: 10rem;" Gap="0.5rem">
     <RadzenStack Class="@($"{BgClass} rz-w-100 rz-p-2")" Gap="0" AlignItems="AlignItems.Center">
             <RadzenText TextStyle="TextStyle.H6" >
             @(OfferHeader)
@@ -15,13 +17,13 @@
                 {
                     <span />
                 }
-            <RadzenText TextStyle="TextStyle.Caption">Price /m2:</RadzenText>
+            <RadzenText TextStyle="TextStyle.Caption">@Localizer["CurrentPrice"] /m2:</RadzenText>
             <RadzenText TextStyle="TextStyle.Body1">@($"{Offer.OfferPricePerSqMeter:N2} PLN")</RadzenText>
 
             </RadzenStack>
         <RadzenStack Orientation="Radzen.Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="0.5rem">
-            <RadzenButton Size="Radzen.ButtonSize.Small" ButtonStyle="ButtonStyle.Success" Disabled="@(AvailableFunding < Offer.TotalPrice())" Click="Buy">Buy that!</RadzenButton>
-            <RadzenButton Size="Radzen.ButtonSize.Small" ButtonStyle="ButtonStyle.Warning" Click="Delete">Nope, thx!</RadzenButton>
+            <RadzenButton Size="Radzen.ButtonSize.Small" ButtonStyle="ButtonStyle.Success" Disabled="@(AvailableFunding < Offer.TotalPrice())" Click="Buy">@Localizer["BuyThat"]</RadzenButton>
+            <RadzenButton Size="Radzen.ButtonSize.Small" ButtonStyle="ButtonStyle.Warning" Click="Delete">@Localizer["NopeThx"]</RadzenButton>
         </RadzenStack>
     </RadzenStack>
 </RadzenCard>

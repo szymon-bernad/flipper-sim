@@ -1,6 +1,9 @@
 ﻿@using FlipperSimLib
 @using FlipperSimLib.Models
-<RadzenCard Variant="Variant.Filled" Wrap="FlexWrap.Wrap" Class="rz-p-0 rz-w-100" Gap="0">
+@using Microsoft.Extensions.Localization
+@inject IStringLocalizer<FlipperSim.Resources.Localization> Localizer
+
+<RadzenCard Variant="Variant.Filled"  Class="rz-p-0 rz-w-100" Gap="0">
     <RadzenText TextStyle="TextStyle.H5" class="@(CurrentDiff > 0 ? "rz-w-100 rz-p-2 rz-background-color-success": "rz-w-100 rz-p-2 rz-background-color-danger")">
         @($"{CurrentDiff:N2} PLN")
     </RadzenText>
@@ -11,22 +14,35 @@
                 <RadzenBadge BadgeStyle="BadgeStyle.Primary">Premium</RadzenBadge>
                 @if (Model.IsBeingUpgraded)
                 {
-                    <RadzenBadge BadgeStyle="BadgeStyle.Warning">Upgrading...</RadzenBadge>
+                    <RadzenBadge BadgeStyle="BadgeStyle.Warning">@Localizer["UpgradeInProgress"]</RadzenBadge>
+                }
+
+                @if (Model.IsBeingRented)
+                {
+                    <RadzenBadge BadgeStyle="BadgeStyle.Info">@Localizer["Renting"]</RadzenBadge>
                 }
             </RadzenStack>
         }
-        <RadzenLabel>Purchase Price:</RadzenLabel>
-        <RadzenText TextStyle="TextStyle.Body1">@($"{Model.PurchasePrice:N2} PLN")</RadzenText>
-        <RadzenLabel>Current Price:</RadzenLabel>
-        <RadzenText TextStyle="TextStyle.Body1">@($"{CurrentPrice:N2} PLN")</RadzenText>
-        <RadzenLabel>Current Price /m2:</RadzenLabel>
-        <RadzenText TextStyle="TextStyle.Body1">@($"{CurrentPrice/Model.UsableAreaSqMeters:N2} PLN")</RadzenText>
+        <RadzenStack Orientation="Radzen.Orientation.Horizontal" Class="rz-p-0 rz-w-100">
+            <RadzenStack Class="rz-w-100">
+                <RadzenLabel>@Localizer["CurrentPrice"]:</RadzenLabel>
+                <RadzenText TextStyle="TextStyle.Body1">@($"{CurrentPrice:N2} PLN")</RadzenText>
+                <RadzenLabel>@Localizer["CurrentPrice"] /m2:</RadzenLabel>
+                <RadzenText TextStyle="TextStyle.Body1">@($"{CurrentPrice / Model.UsableAreaSqMeters:N2} PLN")</RadzenText>
+            </RadzenStack>
 
+            <RadzenStack Class="rz-w-100">
+                <RadzenLabel>@Localizer["PurchasePrice"]:</RadzenLabel>
+                <RadzenText TextStyle="TextStyle.Body1">@($"{Model.PurchasePrice:N2} PLN")</RadzenText>
+            </RadzenStack>
+        </RadzenStack>
         <RadzenText TextStyle="TextStyle.Subtitle2">ID: @Model.PropertyRefId</RadzenText>
     </RadzenStack>
     <RadzenStack Orientation="Radzen.Orientation.Horizontal" class="rz-p-2">
-        <RadzenButton ButtonStyle="ButtonStyle.Warning" Disabled="Model.IsBeingUpgraded" Click="Submit">Sell</RadzenButton>
-        <RadzenButton ButtonStyle="ButtonStyle.Primary" Disabled="Model.IsPremium" Click="Upgrade">Upgrade</RadzenButton>
+        <RadzenButton ButtonStyle="ButtonStyle.Warning" Disabled="@(Model.IsBeingUpgraded||Model.IsBeingRented)" Click="Submit">@Localizer["Sell"]</RadzenButton>
+        <RadzenButton ButtonStyle="ButtonStyle.Primary" Visible="@(!Model.IsPremium&&!Model.IsBeingRented)" Click="Upgrade">@Localizer["Upgrade"]</RadzenButton>
+        <RadzenButton ButtonStyle="ButtonStyle.Primary" Visible="@(!Model.IsBeingUpgraded&&!Model.IsBeingRented)" Click="StartRenting">@Localizer["Rent"]</RadzenButton>
+        <RadzenButton ButtonStyle="ButtonStyle.Primary" Visible="@(Model.IsBeingRented)" Click="StopRenting">@Localizer["EndRenting"]</RadzenButton>
     </RadzenStack>
 </RadzenCard>
 
@@ -35,6 +51,7 @@
     [Parameter] public required RealEstateMarketSimulation MarketSim { get; init; }
     [Parameter] public EventCallback<string> OnClickCallback { get; set; }
     [Parameter] public EventCallback<string> OnUpgradeClickCallback { get; set; }
+    [Parameter] public EventCallback<string> OnRentClickCallback { get; set; }
 
     private decimal CurrentDiff => Math.Round(CurrentPrice - Model.PurchasePrice, 2, MidpointRounding.AwayFromZero);
 
@@ -48,5 +65,15 @@
     private async Task Upgrade()
     {
         await OnUpgradeClickCallback.InvokeAsync(Model.PropertyRefId);
+    }
+
+    private async Task StartRenting()
+    {
+        await OnRentClickCallback.InvokeAsync(Model.PropertyRefId);
+    }
+
+    private async Task StopRenting()
+    {
+        await OnRentClickCallback.InvokeAsync(Model.PropertyRefId);
     }
 }

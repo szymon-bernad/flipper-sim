@@ -1,0 +1,40 @@
+@using FlipperSim.Resources
+@using FlipperSim.Services
+@using Microsoft.Extensions.Localization
+@using System.Globalization
+@inject CultureService CultureService
+@inject IStringLocalizer<Localization> Localizer
+@implements IDisposable
+
+<RadzenDropDown @bind-Value="@_selectedCulture" 
+                Data="@CultureService.GetSupportedCultures()" 
+                TextProperty="@nameof(CultureInfo.NativeName)" 
+                ValueProperty="@nameof(CultureInfo.Name)"
+                Change="@OnCultureChanged"
+                Style="width: 150px;" />
+
+@code {
+    private string _selectedCulture = string.Empty;
+
+    protected override void OnInitialized()
+    {
+        _selectedCulture = CultureService.CurrentCulture.Name;
+        CultureService.CultureChanged += OnCultureChangedInternal;
+    }
+
+    private void OnCultureChanged(object value)
+    {
+        CultureService.SetCulture(_selectedCulture);
+    }
+
+    private void OnCultureChangedInternal()
+    {
+        _selectedCulture = CultureService.CurrentCulture.Name;
+        StateHasChanged();
+    }
+
+    public void Dispose()
+    {
+        CultureService.CultureChanged -= OnCultureChangedInternal;
+    }
+}

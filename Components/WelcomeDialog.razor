@@ -1,13 +1,15 @@
-﻿@inject DialogService dialogService
+﻿@using Microsoft.Extensions.Localization
+@inject DialogService dialogService
+@inject IStringLocalizer<FlipperSim.Resources.Localization> Localizer
 
 <RadzenStack class="rz-w-100 rz-p-5" Gap="1rem" AlignItems="AlignItems.Start">
-    <RadzenText TextStyle="TextStyle.H5" TextAlign="TextAlign.Center">How to play FlipperSim</RadzenText>
-    <RadzenText TextStyle="TextStyle.Body1"><i class="bi bi-cash-stack" > </i> Buy low, sell high, and try to make as much money as possible flipping real estate.</RadzenText>
-    <RadzenText TextStyle="TextStyle.Body1"><i class="bi bi-cash-stack" > </i> You start with 100k PLN on your Flipper Account and you can take up to 750k in loans.</RadzenText>
-    <RadzenText TextStyle="TextStyle.Body1"><i class="bi  bi-exclamation-diamond"> </i><strong> Game is over if your account goes into debt or you're not getting rich fast enough.</strong></RadzenText>
+    <RadzenText TextStyle="TextStyle.H5" TextAlign="TextAlign.Center">@Localizer["HowToPlay"]</RadzenText>
+    <RadzenText TextStyle="TextStyle.Body1"><i class="bi bi-cash-stack" > </i> @Localizer["GameRule1"]</RadzenText>
+    <RadzenText TextStyle="TextStyle.Body1"><i class="bi bi-cash-stack" > </i> @Localizer["GameRule2"]</RadzenText>
+    <RadzenText TextStyle="TextStyle.Body1"><i class="bi  bi-exclamation-diamond"> </i><strong> @Localizer["GameRule3"]</strong></RadzenText>
 
     <RadzenStack  Orientation="Orientation.Horizontal" class="rz-w-100" JustifyContent="JustifyContent.End" Gap="0.5rem">
-        <RadzenButton Click="@((args) => dialogService.Close(true))" Variant="Variant.Flat" Text="LET`S GO!" Style="width: 120px" />
+        <RadzenButton Click="@((args) => dialogService.Close(true))" Variant="Variant.Flat" Text="@Localizer["LetsGo"]" Style="width: 120px" />
     </RadzenStack>
 </RadzenStack>
 @code {

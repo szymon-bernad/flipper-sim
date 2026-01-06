@@ -2,77 +2,142 @@
 
 namespace FlipperSimLib
 {
-    public class RealEstateMarketSimulation(IMarketPriceGenerator _marketPriceGen, int? _randomSeed)
+    public class RealEstateMarketSimulation
     {
+        private readonly IMarketPriceGenerator _marketPriceGen;
+        private readonly IRandomProvider _randomProvider;
+        private readonly IList<RealEstateOffer> _realEstateOffers;
+        private readonly SimulationConfig _config;
+        private FlipperAccount _flipperAccount;
+        private long _updatesCounter;
+        private long _gameOffset;
+
+        public RealEstateMarketSimulation(IMarketPriceGenerator marketPriceGen, int? randomSeed)
+            : this(marketPriceGen, new SystemRandomProvider(randomSeed), config: SimulationConfig.Default)
+        {
+        }
+
+        public RealEstateMarketSimulation(
+            IMarketPriceGenerator marketPriceGen,
+            IRandomProvider randomProvider,
+            long updatesCounter = 0,
+            long gameOffset = 0,
+            IList<RealEstateOffer>? initialOffers = null,
+            FlipperAccount? flipperAccount = null,
+            SimulationConfig? config = null)
+        {
+            _marketPriceGen = marketPriceGen;
+            _randomProvider = randomProvider;
+            _updatesCounter = updatesCounter;
+            _gameOffset = gameOffset;
+            _realEstateOffers = initialOffers ?? new List<RealEstateOffer>();
+            _config = config ?? SimulationConfig.Default;
+            _flipperAccount = flipperAccount ?? new FlipperAccount(_config.DefaultAccountBalance, _marketPriceGen);
+        }
+
         public FlipperAccount FlipperAccount => _flipperAccount;
 
         public bool IsFreshGame => _gameOffset >= _updatesCounter;
 
-        public IEnumerable<RealEstateOffer> GetUpdatedRealEstateOffers(int count)
+        public long UpdatesCounter => _updatesCounter;
+
+        public long GameOffset => _gameOffset;
+
+        public SimulationConfig Config => _config;
+
+        public IEnumerable<RealEstateOffer> GetRealEstateOffersAfterUpdates(int count)
         {
             ++_updatesCounter;
-
             _marketPriceGen.RunGenerator();
 
-            var loanPayments = 0.0m;
-            foreach (var loan in FlipperAccount.Loans)
-            {
-                loanPayments += loan.GetPaymentAmount(_updatesCounter);
-            }
-            FlipperAccount.HandlePayment(loanPayments);
+            var lumpSum = CalculateNetCashFlow(_updatesCounter);
+            FlipperAccount.HandlePayment(lumpSum);
 
-            foreach (var inv in FlipperAccount.Investments)
-            {
-                inv.CheckUpgradeProgress(_updatesCounter);
-            }
-
-            var toBeDeleted = new List<string>();
-            foreach (var offer in _realEstateOffers)
-            {
-                if (offer.CreatedAt < _updatesCounter - 30)
-                {
-                    toBeDeleted.Add(offer.PropertyRefId);
-                }
-            }
-
-            foreach(var offId in toBeDeleted)
-            {
-                DeleteOffer(offId);
-            }
-
-            // Update all existing offer
-            for (int i = 0; i < _realEstateOffers.Count; i++)
-            {
-                _realEstateOffers[i] = _realEstateOffers[i] with
-                {
-                    OfferPricePerSqMeter = Math.Round(
-                        (0.6m * _realEstateOffers[i].OfferPricePerSqMeter + 0.4m * 
-                            GetMarketPricePerSqMeter(_realEstateOffers[i].UsableAreaSqMeters, _realEstateOffers[i].IsPremium)), 2),
-
-                };
-            }
-
-            int offersToGenerate = count - _realEstateOffers.Count;
-            // Only generate new offers if we need more than what we currently have
-            if (offersToGenerate > 0)
-            {
-                for (int i = 0; i < offersToGenerate; i++)
-                {
-                    var area = 18.0m + (decimal)_rndInstance.NextDouble() * 101.0m;
-                    var isPremium = (_rndInstance.NextDouble() > 0.75);
-                    _realEstateOffers.Add(new RealEstateOffer
-                    {
-                        CreatedAt = _updatesCounter,
-                        PropertyRefId = Guid.NewGuid().ToString("N"),
-                        Address = "** REDACTED **",
-                        UsableAreaSqMeters = Math.Round(area, 2),
-                        OfferPricePerSqMeter = Math.Round((1.0m + ((decimal)(_rndInstance.NextDouble() - 0.5)*0.123m)) * GetMarketPricePerSqMeter(area, isPremium), 0),
-                        IsPremium = isPremium,
-                    });
-                }
-            }
+            RemoveExpiredOffers(_updatesCounter);
+            RefreshExistingOffers();
+            GenerateOffersIfNeeded(count);
 
             return _realEstateOffers.Take(count);
+        }
+
+        private decimal CalculateNetCashFlow(long updateCounter)
+        {
+            var lumpSum = 0.0m;
+
+            foreach (var loan in FlipperAccount.Loans)
+            {
+                lumpSum -= loan.GetPaymentAmount(updateCounter);
+            }
+
+            foreach (var investment in FlipperAccount.Investments)
+            {
+                investment.CheckUpgradeProgress(updateCounter);
+                if (investment.IsBeingRented)
+                {
+                    lumpSum += investment.GetPaymentAmount(updateCounter);
+                }
+            }
+
+            return lumpSum;
+        }
+
+        private void RemoveExpiredOffers(long currentUpdate)
+        {
+            var expiredOffers = _realEstateOffers
+                .Where(o => o.CreatedAt < currentUpdate - _config.OfferExpirationDays)
+                .Select(o => o.PropertyRefId)
+                .ToArray();
+
+            foreach (var propertyRefId in expiredOffers)
+            {
+                DeleteOffer(propertyRefId);
+            }
+        }
+
+        private void RefreshExistingOffers()
+        {
+            for (var i = 0; i < _realEstateOffers.Count; i++)
+            {
+                var offer = _realEstateOffers[i];
+                var recalculatedPrice = Math.Round(
+                    (_config.OfferPriceRetentionWeight * offer.OfferPricePerSqMeter) +
+                    (_config.MarketPriceInfluenceWeight * GetMarketPricePerSqMeter(offer.UsableAreaSqMeters, offer.IsPremium)),
+                    2);
+
+                _realEstateOffers[i] = offer with { OfferPricePerSqMeter = recalculatedPrice };
+            }
+        }
+
+        private void GenerateOffersIfNeeded(int requestedCount)
+        {
+            var offersToGenerate = requestedCount - _realEstateOffers.Count;
+            if (offersToGenerate <= 0)
+            {
+                return;
+            }
+
+            for (var i = 0; i < offersToGenerate; i++)
+            {
+                _realEstateOffers.Add(CreateOffer());
+            }
+        }
+
+        private RealEstateOffer CreateOffer()
+        {
+            var area = _config.MinPropertyArea + (decimal)_randomProvider.NextDouble() * _config.PropertyAreaRange;
+            var isPremium = _randomProvider.NextDouble() > _config.PremiumPropertyThreshold;
+
+            return new RealEstateOffer
+            {
+                CreatedAt = _updatesCounter,
+                PropertyRefId = Guid.NewGuid().ToString("N"),
+                Address = "** REDACTED **",
+                UsableAreaSqMeters = Math.Round(area, 2),
+                OfferPricePerSqMeter = Math.Round(
+                    (1.0m + ((decimal)(_randomProvider.NextDouble() - 0.5) * _config.PriceVariationFactor)) *
+                    GetMarketPricePerSqMeter(area, isPremium), 0),
+                IsPremium = isPremium,
+            };
         }
 
         public decimal GetMarketPricePerSqMeter(decimal area, bool isPremium) => _marketPriceGen.GetMarketPricePerSqMeter(area, isPremium);
@@ -90,7 +155,7 @@ namespace FlipperSimLib
 
         public void BuyOffer(string propertyRefId)
         {
-            var offer = _realEstateOffers.FirstOrDefault(o => o.PropertyRefId == propertyRefId) 
+            var offer = _realEstateOffers.FirstOrDefault(o => o.PropertyRefId == propertyRefId)
                 ?? throw new ArgumentException($"Offer with PropertyRefId = [{propertyRefId}] not found.", nameof(propertyRefId));
             DeleteOffer(propertyRefId);
             FlipperAccount.AddInvestment(offer);
@@ -104,11 +169,30 @@ namespace FlipperSimLib
         public bool UpgradeInvestment(string propertyRefId)
         {
             var investment = FlipperAccount.Investments.First(i => i.PropertyRefId == propertyRefId);
-            var upgradeFee = 0.125m * investment.GetCurrentPrice();
+            var upgradeFee = Math.Round(_config.UpgradeFeeRate * investment.GetCurrentPrice(), 2, MidpointRounding.AwayFromZero);
             if (!investment.IsPremium && FlipperAccount.AccountBalance > upgradeFee)
             {
                 investment.Upgrade(upgradeFee, _updatesCounter);
-                FlipperAccount.HandlePayment(upgradeFee);
+                FlipperAccount.HandlePayment(-upgradeFee);
+                return true;
+            }
+
+            return false;
+        }
+
+        public bool ToggleInvestmentRenting(string propertyRefId)
+        {
+            var investment = FlipperAccount.Investments.FirstOrDefault(i => i.PropertyRefId == propertyRefId);
+            if (investment is not null)
+            {
+                if (investment.IsBeingRented)
+                {
+                    investment.EndRenting();
+                }
+                else
+                {
+                    investment.RentProperty();
+                }
                 return true;
             }
 
@@ -117,21 +201,20 @@ namespace FlipperSimLib
 
         public (bool, string) CheckIfGameIsOver()
         {
-            ICollection<(long, int)> gameThresholds = [(200, 750_000), (400, 1_500_000), (600, 3_000_000), (800, 5_000_000)];
             var wealthSum = FlipperAccount.Investments.Sum(i => i.GetCurrentPrice()) + FlipperAccount.AccountBalance;
-            foreach (var gt in gameThresholds)
+            foreach (var gt in _config.GameThresholds)
             {
-                if (_updatesCounter > gt.Item1 + _gameOffset && wealthSum < gt.Item2)
+                if (_updatesCounter > gt.UpdateThreshold + _gameOffset && wealthSum < gt.WealthRequirement)
                 {
                     _gameOffset = _updatesCounter;
-                    return (true, "You are not good enough FLIPPER to continue. GAME OVER");
+                    return (true, "GameOverNotGoodEnough");
                 }
             }
 
             if (FlipperAccount.AccountBalance < 0)
             {
-                _gameOffset = _updatesCounter ;
-                return (true, "Your account balance is negative. GAME OVER");
+                _gameOffset = _updatesCounter;
+                return (true, "GameOverNegativeBalance");
             }
 
             return (false, string.Empty);
@@ -139,17 +222,73 @@ namespace FlipperSimLib
 
         public void ResetAccount()
         {
-            _flipperAccount = new FlipperAccount(100_000m, _marketPriceGen);
+            _flipperAccount = new FlipperAccount(_config.DefaultAccountBalance, _marketPriceGen);
         }
+    }
 
-        private readonly Random _rndInstance = new Random(_randomSeed ?? (int)DateTime.Now.Ticks);
+    public record GameThreshold(long UpdateThreshold, decimal WealthRequirement);
 
-        private long _updatesCounter = 0;
+    public record SimulationConfig
+    {
+        /// <summary>
+        /// Default starting balance for a new account.
+        /// </summary>
+        public decimal DefaultAccountBalance { get; init; } = 100_000m;
 
-        private long _gameOffset = 0;
+        /// <summary>
+        /// Number of updates after which an offer expires.
+        /// </summary>
+        public int OfferExpirationDays { get; init; } = 30;
 
-        private readonly IList<RealEstateOffer> _realEstateOffers = new List<RealEstateOffer>();
+        /// <summary>
+        /// Weight of existing offer price when recalculating (0.0 - 1.0).
+        /// </summary>
+        public decimal OfferPriceRetentionWeight { get; init; } = 0.6m;
 
-        private FlipperAccount _flipperAccount = new FlipperAccount(100_000m, _marketPriceGen);
+        /// <summary>
+        /// Weight of market price when recalculating offer price (0.0 - 1.0).
+        /// </summary>
+        public decimal MarketPriceInfluenceWeight { get; init; } = 0.4m;
+
+        /// <summary>
+        /// Minimum property area in square meters.
+        /// </summary>
+        public decimal MinPropertyArea { get; init; } = 18.0m;
+
+        /// <summary>
+        /// Range of property area (added to MinPropertyArea).
+        /// </summary>
+        public decimal PropertyAreaRange { get; init; } = 101.0m;
+
+        /// <summary>
+        /// Random threshold above which a property is considered premium (0.0 - 1.0).
+        /// </summary>
+        public double PremiumPropertyThreshold { get; init; } = 0.75;
+
+        /// <summary>
+        /// Factor for price variation when creating offers.
+        /// </summary>
+        public decimal PriceVariationFactor { get; init; } = 0.123m;
+
+        /// <summary>
+        /// Rate applied to current price for upgrade fee calculation.
+        /// </summary>
+        public decimal UpgradeFeeRate { get; init; } = 0.1555m;
+
+        /// <summary>
+        /// Game thresholds defining update milestones and required wealth.
+        /// </summary>
+        public IReadOnlyList<GameThreshold> GameThresholds { get; init; } =
+        [
+            new(200, 750_000m),
+            new(400, 1_500_000m),
+            new(600, 3_000_000m),
+            new(800, 5_000_000m)
+        ];
+
+        /// <summary>
+        /// Default configuration with standard game values.
+        /// </summary>
+        public static SimulationConfig Default { get; } = new();
     }
 }

@@ -92,7 +92,7 @@ public class FlipperAccount(decimal _accountBalance, IMarketPriceProvider _provi
     {
         lock (_lockObj)
         {
-            _accountBalance -= amount;
+            _accountBalance += amount;
         }
     }
 

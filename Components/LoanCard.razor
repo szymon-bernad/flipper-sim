@@ -1,10 +1,13 @@
 ﻿@using FlipperSimLib.Models
+@using Microsoft.Extensions.Localization
+@inject IStringLocalizer<FlipperSim.Resources.Localization> Localizer
+
 <RadzenCard Variant="Variant.Text" class="rz-w-100">
     <RadzenStack Orientation="Radzen.Orientation.Horizontal" Gap="0.5rem" Class="rz-w-100" JustifyContent="JustifyContent.Center" AlignItems="AlignItems.Center">
         <RadzenText TextStyle="TextStyle.Body1">
-            @($"{Loan.LoanAmount/1000:N0}k PLN @ {Loan.InterestRate*100:N2} % rate")
+            @($"{Loan.LoanAmount/1000:N0}k PLN @ {Loan.InterestRate*100:N2} %")
         </RadzenText>
-        <RadzenButton ButtonStyle="ButtonStyle.Success" Disabled="@(AvailableFunding < Loan.LoanAmount)" Click="PayOff">Pay off</RadzenButton>
+        <RadzenButton ButtonStyle="ButtonStyle.Success" Disabled="@(AvailableFunding < Loan.LoanAmount)" Click="PayOff">@Localizer["PayOff"]</RadzenButton>
     </RadzenStack>
 </RadzenCard>
 

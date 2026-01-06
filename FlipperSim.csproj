@@ -4,12 +4,17 @@
     <TargetFramework>net9.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
+	  <BlazorWebAssemblyLoadAllGlobalizationData>true</BlazorWebAssemblyLoadAllGlobalizationData>
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Remove="FlipperSimLib.Tests\**" />
     <Compile Remove="FlipperSimLib\**" />
+    <Content Remove="FlipperSimLib.Tests\**" />
     <Content Remove="FlipperSimLib\**" />
+    <EmbeddedResource Remove="FlipperSimLib.Tests\**" />
     <EmbeddedResource Remove="FlipperSimLib\**" />
+    <None Remove="FlipperSimLib.Tests\**" />
     <None Remove="FlipperSimLib\**" />
   </ItemGroup>
 
@@ -20,6 +25,7 @@
   <ItemGroup>
     <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly" Version="9.0.8" />
     <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.DevServer" Version="9.0.8" PrivateAssets="all" />
+    <PackageReference Include="Microsoft.Extensions.Localization" Version="9.0.8" />
     <PackageReference Include="Radzen.Blazor" Version="7.4.3" />
   </ItemGroup>
 
