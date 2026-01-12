@@ -1,4 +1,5 @@
-﻿using FlipperSimLib.Models;
+﻿using System.Text.Json.Nodes;
+using FlipperSimLib.Models;
 
 namespace FlipperSimLib
 {
@@ -44,6 +45,89 @@ namespace FlipperSimLib
         public long GameOffset => _gameOffset;
 
         public SimulationConfig Config => _config;
+
+        #region Serialization
+
+        public JsonObject ToJsonObject()
+        {
+            return new JsonObject
+            {
+                ["updatesCounter"] = _updatesCounter,
+                ["gameOffset"] = _gameOffset,
+                ["account"] = _flipperAccount.ToJsonObject(),
+                ["offers"] = new JsonArray(_realEstateOffers.Select(o => o.ToJsonObject()).ToArray()),
+                ["savedAt"] = DateTime.UtcNow.ToString("O")
+            };
+        }
+
+        public static RealEstateMarketSimulation FromJsonObject(
+            JsonObject json,
+            IMarketPriceGenerator marketPriceGen,
+            IRandomProvider randomProvider,
+            SimulationConfig? config = null)
+        {
+            ArgumentNullException.ThrowIfNull(json);
+            ArgumentNullException.ThrowIfNull(marketPriceGen);
+            ArgumentNullException.ThrowIfNull(randomProvider);
+
+            var updatesCounter = GetRequiredValue<long>(json, "updatesCounter");
+            var gameOffset = GetRequiredValue<long>(json, "gameOffset");
+
+            var accountNode = json["account"]
+                ?? throw new InvalidOperationException("Required property 'account' is missing.");
+
+            if (accountNode is not JsonObject accountJson)
+            {
+                throw new InvalidOperationException("Property 'account' must be a JSON object.");
+            }
+
+            var account = FlipperAccount.FromJsonObject(accountJson, marketPriceGen);
+
+            var offersNode = json["offers"]
+                ?? throw new InvalidOperationException("Required property 'offers' is missing.");
+
+            if (offersNode is not JsonArray offersArray)
+            {
+                throw new InvalidOperationException("Property 'offers' must be an array.");
+            }
+
+            var offers = new List<RealEstateOffer>();
+            foreach (var offerNode in offersArray)
+            {
+                if (offerNode is not JsonObject offerJson)
+                {
+                    throw new InvalidOperationException("Each offer must be a JSON object.");
+                }
+                offers.Add(RealEstateOffer.FromJsonObject(offerJson));
+            }
+
+            return new RealEstateMarketSimulation(
+                marketPriceGen,
+                randomProvider,
+                updatesCounter,
+                gameOffset,
+                offers,
+                account,
+                config);
+        }
+
+        private static T GetRequiredValue<T>(JsonObject json, string propertyName)
+        {
+            var node = json[propertyName]
+                ?? throw new InvalidOperationException($"Required property '{propertyName}' is missing.");
+
+            try
+            {
+                return node.GetValue<T>();
+            }
+            catch (Exception ex) when (ex is InvalidOperationException or FormatException)
+            {
+                throw new InvalidOperationException(
+                    $"Property '{propertyName}' has invalid value. Expected type: {typeof(T).Name}.", ex);
+            }
+        }
+
+        #endregion
 
         public IEnumerable<RealEstateOffer> GetRealEstateOffersAfterUpdates(int count)
         {

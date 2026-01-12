@@ -1,4 +1,4 @@
-﻿using System.Runtime.CompilerServices;
+﻿using System.Text.Json.Nodes;
 
 namespace FlipperSimLib.Models;
 
@@ -51,6 +51,64 @@ public class RealEstateInvestment(IMarketPriceProvider _provider)
     {
         _isBeingRented = false;
     }
+
+    #region Serialization
+
+    public JsonObject ToJsonObject()
+    {
+        return new JsonObject
+        {
+            ["propertyRefId"] = PropertyRefId,
+            ["address"] = Address,
+            ["purchasePrice"] = PurchasePrice,
+            ["usableAreaSqMeters"] = UsableAreaSqMeters,
+            ["isPremium"] = _isPremium,
+            ["isBeingUpgraded"] = _upgradeInProgress,
+            ["upgradeToBeFinishedAt"] = _upgradeToBeFinishedAt,
+            ["isBeingRented"] = _isBeingRented,
+            ["paymentFrequency"] = _paymentFrequency
+        };
+    }
+
+    public static RealEstateInvestment FromJsonObject(JsonObject json, IMarketPriceProvider provider)
+    {
+        ArgumentNullException.ThrowIfNull(json);
+        ArgumentNullException.ThrowIfNull(provider);
+
+        var investment = new RealEstateInvestment(provider)
+        {
+            PropertyRefId = GetRequiredValue<string>(json, "propertyRefId"),
+            Address = GetRequiredValue<string>(json, "address"),
+            PurchasePrice = GetRequiredValue<decimal>(json, "purchasePrice"),
+            UsableAreaSqMeters = GetRequiredValue<decimal>(json, "usableAreaSqMeters"),
+            IsPremium = GetRequiredValue<bool>(json, "isPremium"),
+            IsBeingUpgraded = GetRequiredValue<bool>(json, "isBeingUpgraded")
+        };
+
+        investment._upgradeToBeFinishedAt = GetRequiredValue<long>(json, "upgradeToBeFinishedAt");
+        investment._isBeingRented = GetRequiredValue<bool>(json, "isBeingRented");
+        investment._paymentFrequency = GetRequiredValue<int>(json, "paymentFrequency");
+
+        return investment;
+    }
+
+    private static T GetRequiredValue<T>(JsonObject json, string propertyName)
+    {
+        var node = json[propertyName]
+            ?? throw new InvalidOperationException($"Required property '{propertyName}' is missing.");
+
+        try
+        {
+            return node.GetValue<T>();
+        }
+        catch (Exception ex) when (ex is InvalidOperationException or FormatException)
+        {
+            throw new InvalidOperationException(
+                $"Property '{propertyName}' has invalid value. Expected type: {typeof(T).Name}.", ex);
+        }
+    }
+
+    #endregion
 
     private bool _isPremium;
 
