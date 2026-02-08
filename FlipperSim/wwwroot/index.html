@@ -36,6 +36,21 @@
             get: () => window.localStorage['BlazorCulture'],
             set: (value) => window.localStorage['BlazorCulture'] = value
         };
+
+        window.gameStorage = {
+            save: (key, data) => {
+                window.localStorage.setItem(key, data);
+            },
+            load: (key) => {
+                return window.localStorage.getItem(key);
+            },
+            remove: (key) => {
+                window.localStorage.removeItem(key);
+            },
+            exists: (key) => {
+                return window.localStorage.getItem(key) !== null;
+            }
+        };
     </script>
 </body>
 

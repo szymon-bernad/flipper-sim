@@ -234,4 +234,28 @@
   <data name="EndRenting" xml:space="preserve">
     <value>Zakończ wynajem!</value>
   </data>
+  <data name="PauseAndSave" xml:space="preserve">
+    <value>Pauzuj i Zapisz</value>
+  </data>
+  <data name="GamePaused" xml:space="preserve">
+    <value>Twoja gra jest wstrzymana.</value>
+  </data>
+  <data name="GameSaved" xml:space="preserve">
+    <value>Twój postęp został zapisany.</value>
+  </data>
+  <data name="ResumeGame" xml:space="preserve">
+    <value>Wznów grę</value>
+  </data>
+  <data name="SavedGameFound" xml:space="preserve">
+    <value>Znaleziono zapis gry</value>
+  </data>
+  <data name="LoadSavedGamePrompt" xml:space="preserve">
+    <value>Czy chcesz wczytać zapisaną grę?</value>
+  </data>
+  <data name="LoadGame" xml:space="preserve">
+    <value>Wczytaj grę</value>
+  </data>
+  <data name="NewGame" xml:space="preserve">
+    <value>Nowa gra</value>
+  </data>
 </root>

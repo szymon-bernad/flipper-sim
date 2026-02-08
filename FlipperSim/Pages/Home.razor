@@ -14,11 +14,27 @@
 @inject NavigationManager NavigationManager
 @inject IJSRuntime JS
 @inject CultureService CultureService
+@inject GameSaveService GameSaveService
 
 <PageTitle>@Localizer["AppTitle"]</PageTitle>
 
 @if(IsCultureSet)
 {
+    @if (_isPaused)
+    {
+        <div class="pause-overlay">
+            <div class="pause-content">
+                <i class="bi bi-pause-circle-fill" style="font-size: 4rem; color: rgba(100,125,100,1);"></i>
+                <RadzenText TextStyle="TextStyle.H3" class="rz-mt-4">@Localizer["GamePaused"]</RadzenText>
+                <RadzenText TextStyle="TextStyle.Body1" class="rz-color-secondary">@Localizer["GameSaved"]</RadzenText>
+                <RadzenButton ButtonStyle="ButtonStyle.Success" Style="min-width: 14rem; margin-top: 1.5rem;" Click="ResumeGame">
+                    <i class="bi bi-play-fill"></i> @Localizer["ResumeGame"]
+                </RadzenButton>
+            </div>
+        </div>
+    }
+    else
+    {
     <RadzenRow>
         <RadzenColumn SizeSM=12 SizeMD="8">
             <RadzenStack AlignItems="AlignItems.Center" Orientation="Radzen.Orientation.Vertical">
@@ -53,6 +69,11 @@
 
                             <RadzenButton ButtonStyle="ButtonStyle.Danger" Style="min-width: 12rem" Disabled="@(LoansTotal > 650_000)" Click="async () => await TakeLoan(100_000)">
                                 <i class="bi bi-cash-stack"></i> @Localizer["TakeLoan100k"]
+                            </RadzenButton>
+
+                            <!-- Pause & Save -->
+                            <RadzenButton ButtonStyle="ButtonStyle.Info" Style="min-width: 12rem" Click="PauseAndSaveGame">
+                                <i class="bi bi-save"></i> @Localizer["PauseAndSave"]
                             </RadzenButton>
 
                             <!-- Account Summary -->
@@ -109,6 +130,7 @@
             </RadzenStack>
         </RadzenColumn>
     </RadzenRow>
+    }
 }
 else {
 <div class="landing-container">
@@ -238,6 +260,21 @@ else {
         letter-spacing: 1px;
     }
 
+    .pause-overlay {
+        min-height: 60vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .pause-content {
+        text-align: center;
+        background: white;
+        border-radius: 1rem;
+        padding: 3rem;
+        box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+    }
+
     @@media (max-width: 768px) {
         .landing-title {
             font-size: 2.5rem;
@@ -292,10 +329,12 @@ else {
     public record ChartDataItem(int Index, double? Value);
     private bool IsCultureSet = false;
     private bool IsLoading = false;
+    private bool _isPaused = false;
     private RadzenDialog dialog = default!;
     private bool _unchartedTerritory = true;
     private ICollection<ChartDataItem> _chartValues = new List<ChartDataItem>();
-    private readonly RealEstateMarketSimulation MarketSim = new (new MarketPriceProvider(), null);
+    private readonly MarketPriceProvider _priceProvider = new();
+    private RealEstateMarketSimulation MarketSim = default!;
     private ICollection<RealEstateOffer> CurrentOffers = [];
     private decimal LoansTotal => MarketSim.FlipperAccount.Loans.Sum(l => l.LoanAmount);
     private Timer? _refreshTimer = default;
@@ -308,6 +347,11 @@ else {
     private RadzenDataList<Loan> _dataList = default!;
     private Loan? _loan = default;
 
+    protected override void OnInitialized()
+    {
+        MarketSim = new RealEstateMarketSimulation(_priceProvider, null);
+    }
+
     string? FormatAsCurrency(object value)
     {
         return ((double?)value)?.ToString("N2");
@@ -319,25 +363,64 @@ else {
 
         var result = await JS.InvokeAsync<string>("blazorCulture.get");
         IsCultureSet = result is not null;
+        await InvokeAsync(StateHasChanged);
 
-        if (IsCultureSet && _refreshTimer is null)
+        if (IsCultureSet)
         {
-            _refreshTimer = new Timer(async s => await RefreshRealEstateMarketAsync(s), null, 0, Timeout.Infinite);
+            await TryLoadSavedGameAsync();
+
+            if (_refreshTimer is null)
+            {
+                _refreshTimer = new Timer(async s => await RefreshRealEstateMarketAsync(s), null, 0, Timeout.Infinite);
+            }
+
+            StateHasChanged();
+        }
+    }
+
+    private async Task TryLoadSavedGameAsync()
+    {
+        if (!await GameSaveService.HasSavedGameAsync())
+        {
+            return;
         }
 
-        if(IsCultureSet)
+        var confirmed = await DialogService.Confirm(
+            Localizer["LoadSavedGamePrompt"],
+            Localizer["SavedGameFound"],
+            new ConfirmOptions
+            {
+                OkButtonText = Localizer["LoadGame"],
+                CancelButtonText = Localizer["NewGame"],
+            });
+
+        if (confirmed == true)
         {
-            StateHasChanged();
+            var loaded = await GameSaveService.LoadGameAsync(_priceProvider, new SystemRandomProvider(null));
+            if (loaded is not null)
+            {
+                MarketSim = loaded;
+            }
+        }
+        else
+        {
+            await GameSaveService.DeleteSaveAsync();
         }
     }
 
     protected async Task RefreshRealEstateMarketAsync(object? state)
     {
+        if (_isPaused)
+        {
+            return;
+        }
+
         _stopWatch.Restart();
 
         if (_isGameOver)
         {
             MarketSim.ResetAccount();
+            await GameSaveService.DeleteSaveAsync();
             var gameOverReasonTxt = string.IsNullOrEmpty(_gameOverReason) ? Localizer["GameOverDefault"] : Localizer[_gameOverReason];
 
             await DialogService.Alert(gameOverReasonTxt, Localizer["GameOver"], new AlertOptions { OkButtonText = Localizer["OkThanks"] });
@@ -374,6 +457,29 @@ else {
         _refreshTimer?.Change(dt, Timeout.Infinite);
     }
 
+    private async Task PauseAndSaveGame()
+    {
+        _isPaused = true;
+        _refreshTimer?.Change(Timeout.Infinite, Timeout.Infinite);
+
+        try
+        {
+            await GameSaveService.SaveGameAsync(MarketSim);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error saving game: {ex.Message}");
+        }
+
+        StateHasChanged();
+    }
+
+    private void ResumeGame()
+    {
+        _isPaused = false;
+        _refreshTimer?.Change(0, Timeout.Infinite);
+        StateHasChanged();
+    }
 
     private Task DeleteOffer(RealEstateOffer offer)
     {

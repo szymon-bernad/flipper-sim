@@ -1,10 +1,13 @@
-﻿using System.Text.Json.Nodes;
+﻿using System.Text.Json;
+using System.Text.Json.Nodes;
 using FlipperSimLib.Models;
 
 namespace FlipperSimLib
 {
     public class RealEstateMarketSimulation
     {
+        private const int CurrentSerializationVersion = 1;
+
         private readonly IMarketPriceGenerator _marketPriceGen;
         private readonly IRandomProvider _randomProvider;
         private readonly IList<RealEstateOffer> _realEstateOffers;
@@ -52,12 +55,47 @@ namespace FlipperSimLib
         {
             return new JsonObject
             {
+                ["version"] = CurrentSerializationVersion,
                 ["updatesCounter"] = _updatesCounter,
                 ["gameOffset"] = _gameOffset,
                 ["account"] = _flipperAccount.ToJsonObject(),
                 ["offers"] = new JsonArray(_realEstateOffers.Select(o => o.ToJsonObject()).ToArray()),
                 ["savedAt"] = DateTime.UtcNow.ToString("O")
             };
+        }
+
+        public string ToJsonString(bool indented = false)
+        {
+            var jsonObject = ToJsonObject();
+            var options = new JsonSerializerOptions { WriteIndented = indented };
+            return jsonObject.ToJsonString(options);
+        }
+
+        public static RealEstateMarketSimulation FromJsonString(
+            string json,
+            IMarketPriceGenerator marketPriceGen,
+            IRandomProvider randomProvider,
+            SimulationConfig? config = null)
+        {
+            ArgumentException.ThrowIfNullOrWhiteSpace(json);
+            ArgumentNullException.ThrowIfNull(marketPriceGen);
+            ArgumentNullException.ThrowIfNull(randomProvider);
+
+            JsonObject jsonObject;
+            try
+            {
+                var node = JsonNode.Parse(json)
+                    ?? throw new InvalidOperationException("Parsed JSON is null.");
+
+                jsonObject = node as JsonObject
+                    ?? throw new InvalidOperationException("JSON root must be an object.");
+            }
+            catch (JsonException ex)
+            {
+                throw new InvalidOperationException("Invalid JSON format.", ex);
+            }
+
+            return FromJsonObject(jsonObject, marketPriceGen, randomProvider, config);
         }
 
         public static RealEstateMarketSimulation FromJsonObject(
@@ -69,6 +107,16 @@ namespace FlipperSimLib
             ArgumentNullException.ThrowIfNull(json);
             ArgumentNullException.ThrowIfNull(marketPriceGen);
             ArgumentNullException.ThrowIfNull(randomProvider);
+
+            if (json.ContainsKey("version"))
+            {
+                var version = GetRequiredValue<int>(json, "version");
+                if (version > CurrentSerializationVersion)
+                {
+                    throw new InvalidOperationException(
+                        $"Unsupported serialization version {version}. Maximum supported version is {CurrentSerializationVersion}.");
+                }
+            }
 
             var updatesCounter = GetRequiredValue<long>(json, "updatesCounter");
             var gameOffset = GetRequiredValue<long>(json, "gameOffset");
