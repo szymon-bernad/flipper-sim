@@ -30,7 +30,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="FlipperSimLib\FlipperSimLib.csproj" />
+    <ProjectReference Include="..\FlipperSimLib\FlipperSimLib.csproj" />
   </ItemGroup>
 
 </Project>
