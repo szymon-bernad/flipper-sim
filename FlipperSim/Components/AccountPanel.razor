@@ -1,0 +1,71 @@
+@using FlipperSimLib.Models
+@using Radzen.Blazor
+@using Radzen.Blazor.Rendering
+@using Microsoft.Extensions.Localization
+@inject IStringLocalizer<FlipperSim.Resources.Localization> Localizer
+
+<RadzenStack AlignItems="AlignItems.Center" Class="rz-w-100 rz-p-4 rz-border rz-border-radius-4 rz-border-color-primary-dark" Style="background-color: rgba(100,125,100,1);">
+    <RadzenText TextStyle="TextStyle.H5">
+        <i class="bi bi-wallet2"></i> @Localizer["YourFlipperAccount"]
+    </RadzenText>
+    <RadzenText TextStyle="TextStyle.Caption">@Localizer["CurrentBalance"]</RadzenText>
+    <RadzenText TextStyle="TextStyle.H4" class="@(AccountBalance >= 0 ? "rz-color-success" : "rz-color-danger-light")">
+        @($"{AccountBalance:N2} PLN")
+    </RadzenText>
+
+    <!-- Quick Actions -->
+    <RadzenButton ButtonStyle="ButtonStyle.Warning" Style="min-width: 12rem" Disabled="@(LoansTotal > 700_000)" ButtonSize="ButtonSize.Small" Click="OnTakeLoan50k">
+        <i class="bi bi-cash-coin"></i> @Localizer["TakeLoan50k"]
+    </RadzenButton>
+
+    <RadzenButton ButtonStyle="ButtonStyle.Danger" Style="min-width: 12rem" Disabled="@(LoansTotal > 650_000)" Click="OnTakeLoan100k">
+        <i class="bi bi-cash-stack"></i> @Localizer["TakeLoan100k"]
+    </RadzenButton>
+
+    <!-- Pause & Save -->
+    <RadzenButton ButtonStyle="ButtonStyle.Info" Style="min-width: 12rem" Click="OnPauseAndSave">
+        <i class="bi bi-save"></i> @Localizer["PauseAndSave"]
+    </RadzenButton>
+
+    <!-- Account Summary -->
+    <RadzenText TextStyle="TextStyle.H5" class="rz-color-danger-light">@string.Format(Localizer["LoansFor"], $"{LoansTotal:N0} PLN")</RadzenText>
+
+    @if (Loans.Any())
+    {
+        <RadzenButton @ref=_loansButton Style="min-width: 12rem" ButtonStyle="ButtonStyle.Primary" Click="@(args => _loansPopup.ToggleAsync(_loansButton.Element))" Text="@Localizer["ShowLoans"]" />
+    }
+</RadzenStack>
+
+<Popup @ref=_loansPopup Lazy=true class="my-popup rz-shadow-5">
+    <RadzenText TextStyle="TextStyle.Body1" class="rz-p-4 rz-w-100 rz-text-align-center">
+        <i class="bi bi-cash-stack"></i> @Localizer["YourLoans"]
+    </RadzenText>
+    @if (!Loans.Any())
+    {
+        <RadzenText TextStyle="TextStyle.Body1" class="rz-p-4 rz-w-100 rz-text-align-center">
+            @Localizer["NoActiveLoans"]
+        </RadzenText>
+    }
+    else
+    {
+        <RadzenDataList @ref=_dataList AllowVirtualization=true Data="@Loans" Style="flex: 1; --rz-datalist-padding: 0.1rem 0; --rz-datalist-item-margin-inline: 0; overflow:auto;">
+            <Template Context="_loan">
+                <LoanCard Loan="_loan" AvailableFunding="@AccountBalance" OnClickCallback="OnPayOffLoanCallback" />
+            </Template>
+        </RadzenDataList>
+    }
+</Popup>
+
+@code {
+    [Parameter] public required decimal AccountBalance { get; init; }
+    [Parameter] public required decimal LoansTotal { get; init; }
+    [Parameter] public required IEnumerable<Loan> Loans { get; init; }
+    [Parameter] public EventCallback OnTakeLoan50k { get; set; }
+    [Parameter] public EventCallback OnTakeLoan100k { get; set; }
+    [Parameter] public EventCallback OnPauseAndSave { get; set; }
+    [Parameter] public EventCallback<string> OnPayOffLoanCallback { get; set; }
+
+    private Popup _loansPopup = default!;
+    private RadzenButton _loansButton = default!;
+    private RadzenDataList<Loan> _dataList = default!;
+}

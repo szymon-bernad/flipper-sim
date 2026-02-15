@@ -1,0 +1,37 @@
+@using FlipperSimLib
+@using FlipperSimLib.Models
+@using Microsoft.Extensions.Localization
+@inject IStringLocalizer<FlipperSim.Resources.Localization> Localizer
+
+<RadzenStack AlignItems="AlignItems.Center" class="rz-w-100">
+    @if (Investments.Any())
+    {
+        <RadzenText TextStyle="TextStyle.H5">
+            <i class="bi bi-house-fill"></i> @string.Format(Localizer["YourInvestments"], $"{Investments.Sum(i => i.GetCurrentPrice()):N0}")
+        </RadzenText>
+        @foreach (var inv in Investments)
+        {
+            <InvestmentCard Model="inv" MarketSim="MarketSim"
+                            OnClickCallback="OnSellCallback"
+                            OnUpgradeClickCallback="OnUpgradeCallback"
+                            OnRentClickCallback="OnRentToggleCallback" />
+        }
+    }
+    else
+    {
+        <RadzenText TextStyle="TextStyle.H5">
+            <i class="bi bi-house" style="font-size: 3rem;"></i> @Localizer["NoInvestmentsYet"]
+        </RadzenText>
+        <RadzenText TextStyle="TextStyle.Body1" class="text-center">
+            @Localizer["YourInvestmentsEmpty"]
+        </RadzenText>
+    }
+</RadzenStack>
+
+@code {
+    [Parameter] public required IEnumerable<RealEstateInvestment> Investments { get; init; }
+    [Parameter] public required RealEstateMarketSimulation MarketSim { get; init; }
+    [Parameter] public EventCallback<string> OnSellCallback { get; set; }
+    [Parameter] public EventCallback<string> OnUpgradeCallback { get; set; }
+    [Parameter] public EventCallback<string> OnRentToggleCallback { get; set; }
+}
