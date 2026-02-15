@@ -1,0 +1,27 @@
+@using Radzen.Blazor
+@using Microsoft.Extensions.Localization
+@inject IStringLocalizer<FlipperSim.Resources.Localization> Localizer
+
+<RadzenChart class="rz-w-100">
+    <RadzenChartTooltipOptions Shared="@false" />
+    <RadzenLineSeries Data="@ChartValues" CategoryProperty="Index" Title=" " ValueProperty="Value" LineType="LineType.Solid" Stroke="rgb(100,125,100)">
+        <RadzenMarkers Visible="@false" />
+        <RadzenSeriesDataLabels Visible="@false" />
+    </RadzenLineSeries>
+    <RadzenCategoryAxis />
+    <RadzenValueAxis Formatter="@FormatAsCurrency">
+        <RadzenGridLines Visible="true" />
+        <RadzenAxisTitle Text="PLN" />
+    </RadzenValueAxis>
+</RadzenChart>
+
+@code {
+    [Parameter] public required ICollection<ChartDataItem> ChartValues { get; init; }
+
+    private string? FormatAsCurrency(object value)
+    {
+        return ((double?)value)?.ToString("N2");
+    }
+
+    public record ChartDataItem(int Index, double? Value);
+}
