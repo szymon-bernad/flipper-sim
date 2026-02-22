@@ -3,57 +3,58 @@
 @using FlipperSim.Services
 @using FlipperSimLib
 @using FlipperSimLib.Models
-@using System.Diagnostics
 @using Microsoft.Extensions.Localization
+@implements IDisposable
 @inject DialogService DialogService
 @inject IStringLocalizer<FlipperSim.Resources.Localization> Localizer
 @inject IJSRuntime JS
-@inject GameSaveService GameSaveService
+@inject GameLoopService GameLoop
 
 <PageTitle>@Localizer["AppTitle"]</PageTitle>
 
 @if(IsCultureSet)
 {
-    @if (_isPaused)
+    @if (GameLoop.IsPaused)
     {
-        <PauseOverlay OnResumeClicked="ResumeGame" />
+        <PauseOverlay OnResumeClicked="GameLoop.Resume" />
     }
     else
     {
     <RadzenRow>
         <RadzenColumn SizeSM=12 SizeMD="8">
             <RadzenStack AlignItems="AlignItems.Center" Orientation="Radzen.Orientation.Vertical">
-                <MarketChart ChartValues="_chartValues" />
+                <MarketChart ChartValues="GameLoop.ChartValues" />
                 <RadzenRow Gap="0.5rem" class="rz-w-100">
                     <RadzenColumn SizeMD="6" SizeLG="6" SizeSM="12">
-                        <AccountPanel AccountBalance="MarketSim.FlipperAccount.AccountBalance"
-                                      LoansTotal="LoansTotal"
-                                      Loans="MarketSim.FlipperAccount.Loans"
-                                      OnTakeLoan50k="async () => await TakeLoan(50_000)"
-                                      OnTakeLoan100k="async () => await TakeLoan(100_000)"
-                                      OnPauseAndSave="PauseAndSaveGame"
-                                      OnPayOffLoanCallback="@(EventCallback.Factory.Create<string>(this, PayOffLoan))" />
+                        <AccountPanel AccountBalance="GameLoop.MarketSim.FlipperAccount.AccountBalance"
+                                      LoansTotal="GameLoop.LoansTotal"
+                                      LoanCapacity="GameLoop.LoanCapacity"
+                                      Loans="GameLoop.MarketSim.FlipperAccount.Loans"
+                                      OnTakeLoan50k="() => GameLoop.TakeLoan(50_000)"
+                                      OnTakeLoan100k="() => GameLoop.TakeLoan(100_000)"
+                                      OnPauseAndSave="GameLoop.PauseAndSaveAsync"
+                                      OnPayOffLoanCallback="@(EventCallback.Factory.Create<string>(this, (string id) => GameLoop.PayOffLoan(id)))" />
                     </RadzenColumn>
                     <RadzenColumn SizeMD="6" SizeLG="6" SizeSM="12">
-                        <InvestmentsPanel Investments="MarketSim.FlipperAccount.Investments"
-                                          MarketSim="MarketSim"
-                                          OnSellCallback="@(EventCallback.Factory.Create<string>(this, SellInvestment))"
-                                          OnUpgradeCallback="@(EventCallback.Factory.Create<string>(this, UpgradeInvestment))"
-                                          OnRentToggleCallback="@(EventCallback.Factory.Create<string>(this, ToggleInvestmentRenting))" />
+                        <InvestmentsPanel Investments="GameLoop.MarketSim.FlipperAccount.Investments"
+                                          MarketSim="GameLoop.MarketSim"
+                                          OnSellCallback="@(EventCallback.Factory.Create<string>(this, (string id) => GameLoop.SellInvestment(id)))"
+                                          OnUpgradeCallback="@(EventCallback.Factory.Create<string>(this, (string id) => GameLoop.UpgradeInvestment(id)))"
+                                          OnRentToggleCallback="@(EventCallback.Factory.Create<string>(this, (string id) => GameLoop.ToggleInvestmentRenting(id)))" />
                     </RadzenColumn>
                 </RadzenRow>
             </RadzenStack>
         </RadzenColumn>
         <RadzenColumn SizeSM="12" SizeMD="4" class="text-end rz-p-3">
             <RadzenStack AlignItems="AlignItems.Center">
-                <RadzenText TextStyle="TextStyle.H5">@string.Format(Localizer["ActiveOffers"], CurrentOffers.Count)</RadzenText>
+                <RadzenText TextStyle="TextStyle.H5">@string.Format(Localizer["ActiveOffers"], GameLoop.CurrentOffers.Count)</RadzenText>
                 <RadzenRow>
-                    @foreach (var off in CurrentOffers)
+                    @foreach (var off in GameLoop.CurrentOffers)
                     {
                         <RadzenColumn SizeMD="12" SizeLG="6" SizeXL="6">
-                            <OfferCard Offer="off" AvailableFunding="MarketSim.FlipperAccount.AccountBalance"
-                                       OnDeleteClickCallback="@(EventCallback.Factory.Create<RealEstateOffer>(this, DeleteOffer))"
-                                       OnBuyClickCallback="@(EventCallback.Factory.Create<RealEstateOffer>(this, BuyOffer))" />
+                            <OfferCard Offer="off" AvailableFunding="GameLoop.MarketSim.FlipperAccount.AccountBalance"
+                                       OnDeleteClickCallback="@(EventCallback.Factory.Create<RealEstateOffer>(this, (RealEstateOffer o) => GameLoop.DeleteOffer(o)))"
+                                       OnBuyClickCallback="@(EventCallback.Factory.Create<RealEstateOffer>(this, (RealEstateOffer o) => GameLoop.BuyOffer(o)))" />
                         </RadzenColumn>
                     }
                 </RadzenRow>
@@ -70,47 +71,29 @@ else
 @code {
 
     private bool IsCultureSet = false;
-    private bool _isPaused = false;
-    private ICollection<MarketChart.ChartDataItem> _chartValues = new List<MarketChart.ChartDataItem>();
-    private readonly MarketPriceProvider _priceProvider = new();
-    private RealEstateMarketSimulation MarketSim = default!;
-    private ICollection<RealEstateOffer> CurrentOffers = [];
-    private decimal LoansTotal => MarketSim.FlipperAccount.Loans.Sum(l => l.LoanAmount);
-    private Timer? _refreshTimer = default;
-    private long _startIndex = 0;
-    private bool _isGameOver = false;
-    private string _gameOverReason = string.Empty;
-    private readonly Stopwatch _stopWatch = new();
-
-    protected override void OnInitialized()
-    {
-        MarketSim = new RealEstateMarketSimulation(_priceProvider, null);
-    }
 
     protected override async Task OnInitializedAsync()
     {
         await base.OnInitializedAsync();
 
+        GameLoop.OnStateChanged += HandleStateChangedAsync;
+        GameLoop.OnGameOver += HandleGameOverAsync;
+        GameLoop.OnFreshGame += HandleFreshGameAsync;
+
         var result = await JS.InvokeAsync<string>("blazorCulture.get");
         IsCultureSet = result is not null;
-        await InvokeAsync(StateHasChanged);
 
         if (IsCultureSet)
         {
             await TryLoadSavedGameAsync();
-
-            if (_refreshTimer is null)
-            {
-                _refreshTimer = new Timer(async s => await RefreshRealEstateMarketAsync(s), null, 0, Timeout.Infinite);
-            }
-
+            GameLoop.StartGameLoop();
             StateHasChanged();
         }
     }
 
     private async Task TryLoadSavedGameAsync()
     {
-        if (!await GameSaveService.HasSavedGameAsync())
+        if (!await GameLoop.HasSavedGameAsync())
         {
             return;
         }
@@ -126,188 +109,57 @@ else
 
         if (confirmed == true)
         {
-            var loaded = await GameSaveService.LoadGameAsync(_priceProvider, new SystemRandomProvider(null));
-            if (loaded is not null)
-            {
-                MarketSim = loaded;
-            }
+            await GameLoop.LoadSavedGameAsync();
         }
         else
         {
-            await GameSaveService.DeleteSaveAsync();
+            await GameLoop.DeleteSavedGameAsync();
         }
     }
 
-    protected async Task RefreshRealEstateMarketAsync(object? state)
+    // ── Service event handlers ──
+
+    private async Task HandleStateChangedAsync()
     {
-        if (_isPaused)
-        {
-            return;
-        }
-
-        _stopWatch.Restart();
-
-        if (_isGameOver)
-        {
-            MarketSim.ResetAccount();
-            await GameSaveService.DeleteSaveAsync();
-            var gameOverReasonTxt = string.IsNullOrEmpty(_gameOverReason) ? Localizer["GameOverDefault"] : Localizer[_gameOverReason];
-
-            await DialogService.Alert(gameOverReasonTxt, Localizer["GameOver"], new AlertOptions { OkButtonText = Localizer["OkThanks"] });
-            _isGameOver = false;
-        }
-
-        if (MarketSim.IsFreshGame)
-        {
-            await DialogService.OpenAsync<WelcomeDialog>(
-                Localizer["WelcomeTitle"],
-               new Dictionary<string, object>(),
-               new DialogOptions()
-               {
-                   Resizable = false,
-                   Draggable = false,
-                   CloseDialogOnEsc = false,
-                   CloseDialogOnOverlayClick = false,
-               });
-        }
-
-        CurrentOffers = MarketSim.GetRealEstateOffersAfterUpdates(10).OrderBy(o => o.CreatedAt).ToList();
-
-        _chartValues.Add(new(_chartValues.LastOrDefault()?.Index+1 ?? 1, (double)MarketSim.GetMarketPricePerSqMeter(50.0m, false)));
-        if (_chartValues.Count > 100)
-        {
-            _chartValues = _chartValues.Skip(1).ToList();
-            ++_startIndex;
-        }
-
-        (_isGameOver, _gameOverReason) = MarketSim.CheckIfGameIsOver();
-        StateHasChanged();
-        _stopWatch.Stop();
-        var dt = Math.Max(0, 995 - _stopWatch.ElapsedMilliseconds);
-        _refreshTimer?.Change(dt, Timeout.Infinite);
+        await InvokeAsync(StateHasChanged);
     }
 
-    private async Task PauseAndSaveGame()
+    private async Task HandleGameOverAsync(string reason)
     {
-        _isPaused = true;
-        _refreshTimer?.Change(Timeout.Infinite, Timeout.Infinite);
-
-        try
+        await InvokeAsync(async () =>
         {
-            await GameSaveService.SaveGameAsync(MarketSim);
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"Error saving game: {ex.Message}");
-        }
+            var reasonText = string.IsNullOrEmpty(reason)
+                ? Localizer["GameOverDefault"]
+                : Localizer[reason];
 
-        StateHasChanged();
+            await DialogService.Alert(
+                reasonText,
+                Localizer["GameOver"],
+                new AlertOptions { OkButtonText = Localizer["OkThanks"] });
+        });
     }
 
-    private void ResumeGame()
+    private async Task HandleFreshGameAsync()
     {
-        _isPaused = false;
-        _refreshTimer?.Change(0, Timeout.Infinite);
-        StateHasChanged();
+        await DialogService.OpenAsync<WelcomeDialog>(
+            Localizer["WelcomeTitle"],
+            new Dictionary<string, object>(),
+            new DialogOptions()
+            {
+                Resizable = false,
+                Draggable = false,
+                CloseDialogOnEsc = false,
+                CloseDialogOnOverlayClick = false,
+            });
     }
 
-    private Task DeleteOffer(RealEstateOffer offer)
+    // ── Cleanup ──
+
+    public void Dispose()
     {
-        this.MarketSim.DeleteOffer(offer.PropertyRefId);
-        this.CurrentOffers.Remove(offer);
-
-        StateHasChanged();
-        return Task.CompletedTask;
-    }
-
-    private Task BuyOffer(RealEstateOffer offer)
-    {
-        try
-        {
-            this.MarketSim.BuyOffer(offer.PropertyRefId);
-            this.CurrentOffers.Remove(offer);
-            StateHasChanged();
-
-        }
-        catch(Exception ex)
-        {
-            Console.WriteLine($"Error buying offer {offer.PropertyRefId}: {ex.Message}");
-        }
-
-        return Task.CompletedTask;
-    }
-
-    private Task SellInvestment(string refId)
-    {
-        try
-        {
-            this.MarketSim.SellInvestment(refId);
-            StateHasChanged();
-        }
-        catch(Exception ex)
-        {
-            Console.WriteLine($"Error selling investment {refId}: {ex.Message}");
-        }
-
-        return Task.CompletedTask;
-    }
-
-    private Task TakeLoan(decimal amount)
-    {
-        try
-        {
-            this.MarketSim.FlipperAccount.AddLoan(
-                new Loan
-                {
-                    InterestRate = this.MarketSim.GetInterestRate(),
-                    LoanAmount = amount,
-                    PaymentFrequency = 5,
-                    LoanId = Guid.NewGuid().ToString()
-                });
-
-            StateHasChanged();
-        }
-        catch(Exception ex)
-        {
-            Console.WriteLine($"Error taking loan of {amount}: {ex.Message}");
-        }
-        return Task.CompletedTask;
-
-    }
-
-    private Task PayOffLoan(string loanId)
-    {
-        try
-        {
-            this.MarketSim.FlipperAccount.PayOffLoan(loanId);
-            StateHasChanged();
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"Error paying off loan: {loanId}: {ex.Message}");
-        }
-
-        return Task.CompletedTask;
-    }
-
-    private Task UpgradeInvestment(string refId)
-    {
-        if(this.MarketSim.UpgradeInvestment(refId))
-        {
-            StateHasChanged();
-        }
-
-        return Task.CompletedTask;
-    }
-
-    private Task ToggleInvestmentRenting(string refId)
-    {
-        if(this.MarketSim.ToggleInvestmentRenting(refId))
-        {
-            StateHasChanged();
-        }
-
-        return Task.CompletedTask;
+        GameLoop.OnStateChanged -= HandleStateChangedAsync;
+        GameLoop.OnGameOver -= HandleGameOverAsync;
+        GameLoop.OnFreshGame -= HandleFreshGameAsync;
     }
 
 }

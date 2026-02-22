@@ -1,3 +1,4 @@
+@using FlipperSim.Models
 @using Radzen.Blazor
 @using Microsoft.Extensions.Localization
 @inject IStringLocalizer<FlipperSim.Resources.Localization> Localizer
@@ -16,12 +17,10 @@
 </RadzenChart>
 
 @code {
-    [Parameter] public required ICollection<ChartDataItem> ChartValues { get; init; }
+    [Parameter] public required ICollection<ChartDataPoint> ChartValues { get; init; }
 
     private string? FormatAsCurrency(object value)
     {
         return ((double?)value)?.ToString("N2");
     }
-
-    public record ChartDataItem(int Index, double? Value);
 }

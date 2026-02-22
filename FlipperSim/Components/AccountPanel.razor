@@ -14,11 +14,11 @@
     </RadzenText>
 
     <!-- Quick Actions -->
-    <RadzenButton ButtonStyle="ButtonStyle.Warning" Style="min-width: 12rem" Disabled="@(LoansTotal > 700_000)" ButtonSize="ButtonSize.Small" Click="OnTakeLoan50k">
+    <RadzenButton ButtonStyle="ButtonStyle.Warning" Style="min-width: 12rem" Disabled="@(LoansTotal + 50_000m > LoanCapacity)" ButtonSize="ButtonSize.Small" Click="OnTakeLoan50k">
         <i class="bi bi-cash-coin"></i> @Localizer["TakeLoan50k"]
     </RadzenButton>
 
-    <RadzenButton ButtonStyle="ButtonStyle.Danger" Style="min-width: 12rem" Disabled="@(LoansTotal > 650_000)" Click="OnTakeLoan100k">
+    <RadzenButton ButtonStyle="ButtonStyle.Danger" Style="min-width: 12rem" Disabled="@(LoansTotal + 100_000m > LoanCapacity)" Click="OnTakeLoan100k">
         <i class="bi bi-cash-stack"></i> @Localizer["TakeLoan100k"]
     </RadzenButton>
 
@@ -59,6 +59,7 @@
 @code {
     [Parameter] public required decimal AccountBalance { get; init; }
     [Parameter] public required decimal LoansTotal { get; init; }
+    [Parameter] public required decimal LoanCapacity { get; init; }
     [Parameter] public required IEnumerable<Loan> Loans { get; init; }
     [Parameter] public EventCallback OnTakeLoan50k { get; set; }
     [Parameter] public EventCallback OnTakeLoan100k { get; set; }

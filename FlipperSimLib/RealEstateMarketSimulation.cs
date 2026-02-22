@@ -365,7 +365,7 @@ namespace FlipperSimLib
         /// <summary>
         /// Default starting balance for a new account.
         /// </summary>
-        public decimal DefaultAccountBalance { get; init; } = 100_000m;
+        public decimal DefaultAccountBalance { get; init; } = 220_000m;
 
         /// <summary>
         /// Number of updates after which an offer expires.
@@ -412,10 +412,10 @@ namespace FlipperSimLib
         /// </summary>
         public IReadOnlyList<GameThreshold> GameThresholds { get; init; } =
         [
-            new(200, 750_000m),
+            new(250, 500_000m),
             new(400, 1_500_000m),
-            new(600, 3_000_000m),
-            new(800, 5_000_000m)
+            new(700, 3_000_000m),
+            new(990, 5_000_000m)
         ];
 
         /// <summary>

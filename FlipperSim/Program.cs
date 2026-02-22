@@ -17,6 +17,7 @@ builder.Services.AddScoped(sp => new HttpClient { BaseAddress = new Uri(builder.
 builder.Services.AddLocalization();
 builder.Services.AddSingleton<CultureService>();
 builder.Services.AddScoped<GameSaveService>();
+builder.Services.AddScoped<GameLoopService>();
 
 
 builder.Services.AddRadzenComponents();

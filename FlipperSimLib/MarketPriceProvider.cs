@@ -25,17 +25,17 @@ public class MarketPriceProvider : IMarketPriceProvider, IMarketPriceGenerator
     {
         if (--_nextFactorUpdateIn <= 0)
         {
-            _factorTrendDirection = (decimal)(_rndInstance.NextDouble() - 0.5) * 0.05274m;
-            _nextFactorUpdateIn = _rndInstance.Next(7, 21);
+            _factorTrendDirection = (decimal)(_rndInstance.NextDouble() - 0.5) * 0.03275m;
+            _nextFactorUpdateIn = _rndInstance.Next(11, 23);
         }
 
         var noiseFactor = 0.001101m * (decimal)(_rndInstance.NextDouble() - 0.5);
         _marketPriceFactor = (1m + _factorTrendDirection + noiseFactor) * _marketPriceFactor;
-        _marketPriceFactor = Math.Max(0.5m, Math.Min(2.333m, _marketPriceFactor));
+        _marketPriceFactor = Math.Max(0.5m, Math.Min(2m, _marketPriceFactor));
 
-        if (_marketPriceFactor == 0.5m || _marketPriceFactor == 2.333m)
+        if (_marketPriceFactor == 0.5m || (_marketPriceFactor >= 1.85m && _factorTrendDirection > 0))
         {
-            _factorTrendDirection = -(2*_factorTrendDirection);
+            _factorTrendDirection = -(_factorTrendDirection);
         }
     }
 
