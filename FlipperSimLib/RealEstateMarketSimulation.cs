@@ -413,9 +413,9 @@ namespace FlipperSimLib
         public IReadOnlyList<GameThreshold> GameThresholds { get; init; } =
         [
             new(250, 500_000m),
-            new(400, 1_500_000m),
-            new(700, 3_000_000m),
-            new(990, 5_000_000m)
+            new(450, 1_100_000m),
+            new(750, 3_000_000m),
+            new(990, 5_500_000m)
         ];
 
         /// <summary>

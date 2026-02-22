@@ -28,7 +28,7 @@ public class RealEstateInvestment(IMarketPriceProvider _provider)
     {
         _isPremium = true;
         _upgradeInProgress = true;
-        _upgradeToBeFinishedAt = updateCounter + 20;
+        _upgradeToBeFinishedAt = updateCounter + 16;
         PurchasePrice += upgradeFee;
     }
 
