@@ -21,7 +21,7 @@ public class RealEstateInvestment(IMarketPriceProvider _provider)
 
     public decimal GetCurrentPrice() => Math.Round(UsableAreaSqMeters * _provider.GetMarketPricePerSqMeter(UsableAreaSqMeters, _isPremium), 2, MidpointRounding.AwayFromZero);
 
-    private const decimal RentalRatePerCycle = 0.00255m;
+    private const decimal RentalRatePerCycle = 0.00555m;
 
     public decimal GetPaymentAmount(long updateCounter)
     {
@@ -40,7 +40,7 @@ public class RealEstateInvestment(IMarketPriceProvider _provider)
     {
         _isPremium = true;
         _upgradeInProgress = true;
-        _upgradeToBeFinishedAt = updateCounter + 16;
+        _upgradeToBeFinishedAt = updateCounter + 17;
         PurchasePrice += upgradeFee;
     }
 
@@ -53,7 +53,7 @@ public class RealEstateInvestment(IMarketPriceProvider _provider)
         }
     }
 
-    public void RentProperty(int paymentFrequency = 4)
+    public void RentProperty(int paymentFrequency = 5)
     {
         _isBeingRented = true;
         _paymentFrequency = paymentFrequency;

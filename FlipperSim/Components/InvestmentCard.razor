@@ -8,10 +8,11 @@
         @($"{CurrentDiff:N2} PLN")
     </RadzenText>
     <RadzenStack class="rz-w-100 rz-p-2" Gap="0.2rem" AlignItems="AlignItems.Start">
-        @if (Model.IsPremium)
-        {
             <RadzenStack class="rz-w-100 rz-p-0" Gap="0.2rem" Orientation="Radzen.Orientation.Horizontal" AlignItems="AlignItems.Stretch">
+            @if (Model.IsPremium)
+            {
                 <RadzenBadge BadgeStyle="BadgeStyle.Primary">Premium</RadzenBadge>
+            }
                 @if (Model.IsBeingUpgraded)
                 {
                     <RadzenBadge BadgeStyle="BadgeStyle.Warning">@Localizer["UpgradeInProgress"]</RadzenBadge>
@@ -22,7 +23,6 @@
                     <RadzenBadge BadgeStyle="BadgeStyle.Info">@Localizer["Renting"]</RadzenBadge>
                 }
             </RadzenStack>
-        }
         <RadzenStack Orientation="Radzen.Orientation.Horizontal" Class="rz-p-0 rz-w-100">
             <RadzenStack Class="rz-w-100">
                 <RadzenLabel>@Localizer["CurrentPrice"]:</RadzenLabel>

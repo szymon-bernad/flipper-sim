@@ -5,7 +5,7 @@ public sealed class LoanBuilder
     private string _loanId = Guid.NewGuid().ToString("N");
     private decimal _loanAmount = 50_000m;
     private decimal _interestRate = 0.01m;
-    private int _paymentFrequency = 10;
+    private int _paymentFrequency = 4;
 
     public LoanBuilder WithLoanId(string value)
     {

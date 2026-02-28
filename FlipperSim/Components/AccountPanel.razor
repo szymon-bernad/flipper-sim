@@ -14,15 +14,16 @@
             @($"{AccountBalance:N2} PLN")
         </RadzenText>
         <span style="display: inline-block; width: 1.25rem; font-size: 1.25rem;">
-            @if (_balanceChange > 0)
+            @if (BalanceTrend >= 0)
             {
                 <i class="bi bi-caret-up-fill rz-color-success"></i>
             }
-            else if (_balanceChange < 0)
+            else
             {
                 <i class="bi bi-caret-down-fill rz-color-danger"></i>
             }
         </span>
+
     </RadzenStack>
 
     <!-- Quick Actions -->
@@ -79,7 +80,7 @@
     [Parameter] public EventCallback<string> OnPayOffLoanCallback { get; set; }
 
     private decimal _previousBalance;
-    private decimal _balanceChange;
+    private readonly Queue<decimal> _recentChanges = new();
 
     protected override void OnInitialized()
     {
@@ -88,9 +89,20 @@
 
     protected override void OnParametersSet()
     {
-        _balanceChange = AccountBalance - _previousBalance;
+        var delta = AccountBalance - _previousBalance;
+        if (delta != 0)
+        {
+            _recentChanges.Enqueue(delta);
+            if (_recentChanges.Count > 6)
+            {
+                _recentChanges.Dequeue();
+            }
+
+        }
         _previousBalance = AccountBalance;
     }
+
+    private decimal BalanceTrend => _recentChanges.Sum();
 
     private Popup _loansPopup = default!;
     private RadzenButton _loansButton = default!;

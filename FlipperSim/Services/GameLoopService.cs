@@ -20,7 +20,7 @@ public sealed class GameLoopService
     private string _gameOverReason = string.Empty;
 
     // Chart data
-    private ICollection<ChartDataPoint> _chartValues = new List<ChartDataPoint>();
+    private readonly Queue<ChartDataPoint> _chartValues = new ();
 
     // Current offers snapshot
     private ICollection<RealEstateOffer> _currentOffers = [];
@@ -37,7 +37,7 @@ public sealed class GameLoopService
 
     public RealEstateMarketSimulation MarketSim => _marketSim;
     public ICollection<RealEstateOffer> CurrentOffers => _currentOffers;
-    public ICollection<ChartDataPoint> ChartValues => _chartValues;
+    public ICollection<ChartDataPoint> ChartValues => _chartValues.ToList();
     public bool IsPaused => _isPaused;
     public decimal LoansTotal => _marketSim.FlipperAccount.Loans.Sum(l => l.LoanAmount);
     public decimal InvestmentsWorth => _marketSim.FlipperAccount.Investments.Sum(i => i.GetCurrentPrice());
@@ -165,7 +165,7 @@ public sealed class GameLoopService
             {
                 InterestRate = _marketSim.GetInterestRate(),
                 LoanAmount = amount,
-                PaymentFrequency = 5,
+                PaymentFrequency = 4,
                 LoanId = Guid.NewGuid().ToString()
             });
         }
@@ -240,13 +240,13 @@ public sealed class GameLoopService
             .OrderBy(o => o.CreatedAt)];
 
         // Update chart
-        _chartValues.Add(new ChartDataPoint(
+        _chartValues.Enqueue(new ChartDataPoint(
             _chartValues.LastOrDefault()?.Index + 1 ?? 1,
             (double)_marketSim.GetMarketPricePerSqMeter(50.0m, false)));
 
         if (_chartValues.Count > 100)
         {
-            _chartValues = _chartValues.Skip(1).ToList();
+            _chartValues.Dequeue();
         }
 
         // Check game over (result is acted on next tick)
