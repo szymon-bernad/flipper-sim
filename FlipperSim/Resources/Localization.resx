@@ -258,4 +258,10 @@
   <data name="NewGame" xml:space="preserve">
     <value>New game</value>
   </data>
+  <data name="UpgradeCost" xml:space="preserve">
+    <value>Upgrade Cost</value>
+  </data>
+  <data name="RentalIncomePerCycle" xml:space="preserve">
+    <value>Est. Rental Income</value>
+  </data>
 </root>

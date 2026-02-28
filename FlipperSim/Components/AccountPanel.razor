@@ -9,9 +9,21 @@
         <i class="bi bi-wallet2"></i> @Localizer["YourFlipperAccount"]
     </RadzenText>
     <RadzenText TextStyle="TextStyle.Caption">@Localizer["CurrentBalance"]</RadzenText>
-    <RadzenText TextStyle="TextStyle.H4" class="@(AccountBalance >= 0 ? "rz-color-success" : "rz-color-danger-light")">
-        @($"{AccountBalance:N2} PLN")
-    </RadzenText>
+    <RadzenStack Orientation="Radzen.Orientation.Horizontal" AlignItems="AlignItems.Center" JustifyContent="JustifyContent.Center" Gap="0.25rem">
+        <RadzenText TextStyle="TextStyle.H4" class="@(AccountBalance >= 0 ? "rz-color-success" : "rz-color-danger-light")">
+            @($"{AccountBalance:N2} PLN")
+        </RadzenText>
+        <span style="display: inline-block; width: 1.25rem; font-size: 1.25rem;">
+            @if (_balanceChange > 0)
+            {
+                <i class="bi bi-caret-up-fill rz-color-success"></i>
+            }
+            else if (_balanceChange < 0)
+            {
+                <i class="bi bi-caret-down-fill rz-color-danger"></i>
+            }
+        </span>
+    </RadzenStack>
 
     <!-- Quick Actions -->
     <RadzenButton ButtonStyle="ButtonStyle.Warning" Style="min-width: 12rem" Disabled="@(LoansTotal + 50_000m > LoanCapacity)" ButtonSize="ButtonSize.Small" Click="OnTakeLoan50k">
@@ -65,6 +77,20 @@
     [Parameter] public EventCallback OnTakeLoan100k { get; set; }
     [Parameter] public EventCallback OnPauseAndSave { get; set; }
     [Parameter] public EventCallback<string> OnPayOffLoanCallback { get; set; }
+
+    private decimal _previousBalance;
+    private decimal _balanceChange;
+
+    protected override void OnInitialized()
+    {
+        _previousBalance = AccountBalance;
+    }
+
+    protected override void OnParametersSet()
+    {
+        _balanceChange = AccountBalance - _previousBalance;
+        _previousBalance = AccountBalance;
+    }
 
     private Popup _loansPopup = default!;
     private RadzenButton _loansButton = default!;

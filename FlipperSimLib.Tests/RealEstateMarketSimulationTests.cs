@@ -578,12 +578,12 @@ public sealed class RealEstateMarketSimulationTests
     }
 
     [Theory]
-    [InlineData(201, 0, 749_999, true)]    // Just past threshold, wealth below
-    [InlineData(401, 0, 1_499_999, true)]  // Second threshold
-    [InlineData(601, 0, 2_999_999, true)]  // Third threshold
-    [InlineData(801, 0, 4_999_999, true)]  // Fourth threshold
-    [InlineData(200, 0, 100_000, false)]   // Exactly at threshold boundary - no game over
-    [InlineData(201, 0, 750_000, false)]   // Past threshold but wealth meets requirement
+    [InlineData(251, 0, 499_999, true)]    // Just past threshold, wealth below
+    [InlineData(451, 0, 1_099_999, true)]  // Second threshold
+    [InlineData(751, 0, 2_999_999, true)]  // Third threshold
+    [InlineData(991, 0, 5_499_999, true)]  // Fourth threshold
+    [InlineData(250, 0, 100_000, false)]   // Exactly at threshold boundary - no game over
+    [InlineData(251, 0, 500_000, false)]   // Past threshold but wealth meets requirement
     public void CheckIfGameIsOver_WealthThreshold_ReturnsExpectedResult(
         long updatesCounter,
         long gameOffset,
@@ -643,12 +643,12 @@ public sealed class RealEstateMarketSimulationTests
 
         // Balance: 800,000 - 560,000 = 240,000
         // Investment value: 70 * 10,000 = 700,000
-        // Total wealth: 240,000 + 700,000 = 940,000 > 750,000 threshold
+        // Total wealth: 240,000 + 700,000 = 940,000 > 500,000 threshold
 
         var simulation = new RealEstateMarketSimulation(
             priceGen,
             random,
-            updatesCounter: 201,
+            updatesCounter: 251,
             flipperAccount: account);
 
         // Act
@@ -661,30 +661,30 @@ public sealed class RealEstateMarketSimulationTests
 
     [Theory]
     // Offset 0 - baseline behavior
-    [InlineData(100, 0, 100_000, false)]      // Counter 100, below 200 threshold
-    [InlineData(201, 0, 100_000, true)]       // Counter 201, past 200 threshold with low wealth
+    [InlineData(100, 0, 100_000, false)]       // Counter 100, below 250 threshold
+    [InlineData(251, 0, 100_000, true)]        // Counter 251, past 250 threshold with low wealth
 
-    // Offset 100 - first threshold shifts to 300
-    [InlineData(300, 100, 100_000, false)]    // Exactly at 200+100=300, not past (uses >)
-    [InlineData(301, 100, 100_000, true)]     // Past 300 threshold with low wealth
-    [InlineData(301, 100, 750_000, false)]    // Past 300 threshold but wealth meets requirement
+    // Offset 100 - first threshold shifts to 350
+    [InlineData(350, 100, 100_000, false)]     // Exactly at 250+100=350, not past (uses >)
+    [InlineData(351, 100, 100_000, true)]      // Past 350 threshold with low wealth
+    [InlineData(351, 100, 500_000, false)]     // Past 350 threshold but wealth meets requirement
 
-    // Offset 250 - first threshold shifts to 450
-    [InlineData(450, 250, 100_000, false)]    // Exactly at 200+250=450, not past
-    [InlineData(451, 250, 100_000, true)]     // Past 450 threshold with low wealth
-    [InlineData(451, 250, 750_000, false)]    // Past 450 threshold, wealth meets 750K
+    // Offset 250 - first threshold shifts to 500
+    [InlineData(500, 250, 100_000, false)]     // Exactly at 250+250=500, not past
+    [InlineData(501, 250, 100_000, true)]      // Past 500 threshold with low wealth
+    [InlineData(501, 250, 500_000, false)]     // Past 500 threshold, wealth meets 500K
 
-    // Offset 500 - first threshold shifts to 700
-    [InlineData(700, 500, 100_000, false)]    // Exactly at 200+500=700, not past
-    [InlineData(701, 500, 100_000, true)]     // Past 700 threshold with low wealth
-    [InlineData(901, 500, 750_000, true)]     // Past 400+500=900, wealth below 1.5M requirement
-    [InlineData(901, 500, 1_500_000, false)]  // Past 900 threshold, wealth meets 1.5M
+    // Offset 500 - first threshold shifts to 750
+    [InlineData(750, 500, 100_000, false)]     // Exactly at 250+500=750, not past
+    [InlineData(751, 500, 100_000, true)]      // Past 750 threshold with low wealth
+    [InlineData(951, 500, 500_000, true)]      // Past 450+500=950, wealth below 1.1M requirement
+    [InlineData(951, 500, 1_100_000, false)]   // Past 950 threshold, wealth meets 1.1M
 
     // Offset 1000 - large offset, thresholds shift significantly
-    [InlineData(1200, 1000, 100_000, false)]  // Counter 1200, below 200+1000=1200 (uses >)
-    [InlineData(1201, 1000, 100_000, true)]   // Past 1200 threshold with low wealth
-    [InlineData(1401, 1000, 750_000, true)]   // Past 400+1000=1400, wealth below 1.5M
-    [InlineData(1401, 1000, 1_500_000, false)] // Past 1400 threshold, wealth meets 1.5M
+    [InlineData(1250, 1000, 100_000, false)]   // Counter 1250, at 250+1000=1250 (uses >)
+    [InlineData(1251, 1000, 100_000, true)]    // Past 1250 threshold with low wealth
+    [InlineData(1451, 1000, 500_000, true)]    // Past 450+1000=1450, wealth below 1.1M
+    [InlineData(1451, 1000, 1_100_000, false)] // Past 1450 threshold, wealth meets 1.1M
     public void CheckIfGameIsOver_AccountsForGameOffset_WhenCheckingThresholds(
         long updatesCounter,
         long gameOffset,

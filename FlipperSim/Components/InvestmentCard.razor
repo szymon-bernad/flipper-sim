@@ -36,11 +36,20 @@
                 <RadzenText TextStyle="TextStyle.Body1">@($"{Model.PurchasePrice:N2} PLN")</RadzenText>
             </RadzenStack>
         </RadzenStack>
-        <RadzenText TextStyle="TextStyle.Subtitle2">ID: @Model.PropertyRefId</RadzenText>
+        @if (Model.IsBeingRented)
+        {
+            <RadzenStack Orientation="Radzen.Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="0.5rem"
+                         class="rz-px-2" Style="@(IsPaymentTick ? "background: var(--rz-info-lighter); border-radius: 4px; transition: background 0.3s;" : "transition: background 0.3s;")">
+                <RadzenLabel Style="margin: 0;">@Localizer["RentalIncomePerCycle"]:</RadzenLabel>
+                <RadzenText TextStyle="TextStyle.Body1" Style="@(IsPaymentTick ? "color: var(--rz-info-dark); font-weight: bold;" : "color: var(--rz-info);")">
+                    @($"{RentalIncomePerCycle:N2} PLN")
+                </RadzenText>
+            </RadzenStack>
+        }
     </RadzenStack>
-    <RadzenStack Orientation="Radzen.Orientation.Horizontal" class="rz-p-2">
+    <RadzenStack Orientation="Radzen.Orientation.Horizontal" AlignItems="AlignItems.Center" class="rz-p-2">
         <RadzenButton ButtonStyle="ButtonStyle.Warning" Disabled="@(Model.IsBeingUpgraded||Model.IsBeingRented)" Click="Submit">@Localizer["Sell"]</RadzenButton>
-        <RadzenButton ButtonStyle="ButtonStyle.Primary" Visible="@(!Model.IsPremium&&!Model.IsBeingRented)" Click="Upgrade">@Localizer["Upgrade"]</RadzenButton>
+        <RadzenButton ButtonStyle="ButtonStyle.Primary" Visible="@(!Model.IsPremium&&!Model.IsBeingRented)" Click="Upgrade">@Localizer["Upgrade"] (@($"{UpgradeCost:N2} PLN"))</RadzenButton>
         <RadzenButton ButtonStyle="ButtonStyle.Primary" Visible="@(!Model.IsBeingUpgraded&&!Model.IsBeingRented)" Click="StartRenting">@Localizer["Rent"]</RadzenButton>
         <RadzenButton ButtonStyle="ButtonStyle.Primary" Visible="@(Model.IsBeingRented)" Click="StopRenting">@Localizer["EndRenting"]</RadzenButton>
     </RadzenStack>
@@ -56,6 +65,12 @@
     private decimal CurrentDiff => Math.Round(CurrentPrice - Model.PurchasePrice, 2, MidpointRounding.AwayFromZero);
 
     private decimal CurrentPrice => Model.GetCurrentPrice();
+
+    private decimal UpgradeCost => Math.Round(CurrentPrice * MarketSim.Config.UpgradeFeeRate, 2, MidpointRounding.AwayFromZero);
+
+    private decimal RentalIncomePerCycle => Model.GetEstimatedRentalIncomePerCycle();
+
+    private bool IsPaymentTick => Model.IsBeingRented && Model.GetPaymentAmount(MarketSim.UpdatesCounter) > 0;
 
     private async Task Submit()
     {

@@ -255,7 +255,7 @@ public sealed class GameLoopService
         await (OnStateChanged?.Invoke() ?? Task.CompletedTask);
 
         _stopWatch.Stop();
-        var dt = Math.Max(0, 995 - _stopWatch.ElapsedMilliseconds);
+        var dt = Math.Max(0, 1600 - _stopWatch.ElapsedMilliseconds);
         _refreshTimer?.Change(dt, Timeout.Infinite);
     }
 }

@@ -1,4 +1,5 @@
-﻿using System.Text.Json.Nodes;
+﻿using System.Reflection.Metadata.Ecma335;
+using System.Text.Json.Nodes;
 
 namespace FlipperSimLib.Models;
 
@@ -20,9 +21,20 @@ public class RealEstateInvestment(IMarketPriceProvider _provider)
 
     public decimal GetCurrentPrice() => Math.Round(UsableAreaSqMeters * _provider.GetMarketPricePerSqMeter(UsableAreaSqMeters, _isPremium), 2, MidpointRounding.AwayFromZero);
 
-    public decimal GetPaymentAmount(long updateCounter) => (updateCounter % _paymentFrequency == 0) ?
-        Math.Round(GetCurrentPrice() * 0.00444m, 2, MidpointRounding.AwayFromZero) :
-        0.0m;
+    private const decimal RentalRatePerCycle = 0.00255m;
+
+    public decimal GetPaymentAmount(long updateCounter)
+    {
+        if (updateCounter % _paymentFrequency != 0)
+        {
+            return 0m;
+        }
+        
+        _previousRentAmount = GetRentAmount();
+        return _previousRentAmount;
+    }
+
+    public decimal GetEstimatedRentalIncomePerCycle() => GetRentAmount();
 
     public void Upgrade(decimal upgradeFee, long updateCounter)
     {
@@ -41,7 +53,7 @@ public class RealEstateInvestment(IMarketPriceProvider _provider)
         }
     }
 
-    public void RentProperty(int paymentFrequency = 5)
+    public void RentProperty(int paymentFrequency = 4)
     {
         _isBeingRented = true;
         _paymentFrequency = paymentFrequency;
@@ -110,6 +122,12 @@ public class RealEstateInvestment(IMarketPriceProvider _provider)
 
     #endregion
 
+
+    private decimal GetRentAmount() =>
+        _previousRentAmount == 0m ?
+            GetCurrentPrice() * RentalRatePerCycle :
+            (_previousRentAmount * 0.7m) + (GetCurrentPrice() * RentalRatePerCycle * 0.3m);
+
     private bool _isPremium;
 
     private bool _upgradeInProgress;
@@ -118,5 +136,7 @@ public class RealEstateInvestment(IMarketPriceProvider _provider)
 
     private long _upgradeToBeFinishedAt = 0;
 
-    private int _paymentFrequency = 5;
+    private int _paymentFrequency;
+
+    private decimal _previousRentAmount = 0m;
 }
